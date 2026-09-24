@@ -109,6 +109,9 @@ const ICONS={
  close:'<path d="M5.3 5.3 L18.7 18.7 M18.7 5.3 L5.3 18.7"/>',
  print:'<path d="M6.3 9 V4.3 H17.8 V9"/><path d="M4 9 H20 V16 H17"/><path d="M7 16 H17 V20 H7 Z"/><path d="M4 9 V16 H7"/>',
  share:'<path d="M4.2 12 C4.2 7.6 8 4.6 12.1 4.6 C16.2 4.6 20 7.6 20 12 C20 16.1 16.4 18.9 12.4 18.9 C10.9 18.9 9.6 18.6 8.6 18 L4.6 19.2 L5.7 15.6 C4.7 14.5 4.2 13.3 4.2 12 Z"/>',
+ rental:'<path d="M5 4.5 H15 V19.5 H5 Z"/><path d="M5 4.5 C5 4.5 3.5 4.7 3.5 6.5 V17.5 C3.5 19.3 5 19.5 5 19.5"/><circle cx="18" cy="15" r="3.3"/><path d="M18 13.3 V15 L19.3 15.8"/>',
+ people:'<circle cx="8.5" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.3 20 C3.7 15.3 6 13.3 8.5 13.3 C11 13.3 13.3 15.3 13.7 20"/><path d="M14.6 14.4 C16.7 14.4 18.9 15.7 19.4 19.3"/>',
+ clock:'<circle cx="12" cy="12" r="8.2"/><path d="M12 7.4 V12 L15.4 14.2"/>',
 };
 const icon=(name,size)=>{const s=h('span',{class:'ico'});s.style.width=s.style.height=(size||20)+'px';s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||ICONS.more}</svg>`;return s};
 const L=k=>Object.values(R).filter(r=>r.kind==k&&!r.deleted).map(r=>r.data),rec=id=>R[id]&&!R[id].deleted?R[id].data:null;
@@ -117,6 +120,26 @@ const DM={book:{label:'Books',gst:0},cafe:{label:'Cafe',gst:5},stat:{label:'Stat
 const DEPT_KIND={book:'book',cafe:'cafeitem',stat:'stationery'};
 const DENOMS=[{v:2000,rare:true},{v:500},{v:200},{v:100},{v:50},{v:20},{v:10},{v:5},{v:2},{v:1}];
 const normPhone=p=>(p||'').replace(/\D/g,'');
+/* expense categories: fixed set per the reference architecture doc, so reports can be grouped */
+const EXP_CATS=['Electricity','Internet','Rent','Salaries','Packaging','Transport','Repairs','Stationery','Cleaning','Marketing','Maintenance','Other'];
+/* co-reading membership plans: monthly hour-bundles, sold like an item but tracked as a time balance */
+const MEMBER_PLANS=[{id:'p30',label:'30 hrs / month',price:999,hours:30},{id:'p60',label:'60 hrs / month',price:1499,hours:60},{id:'p90',label:'90 hrs / month',price:1999,hours:90}];
+/* book rental deposit refund tiers -- returned sooner keeps a bigger share of the deposit.
+   Beyond 2 months (or never returned) we treat the book as forfeited/sold: refund 0%, so the
+   store isn't left holding an open liability forever; staff can always override with a manual
+   store-credit adjustment via custModal if a judgment call is needed for a specific customer. */
+function rentalRefundPct(days){if(days<=7)return.8;if(days<=30)return.7;if(days<=60)return.6;return 0}
+/* per-prefix ticket numbering, separate counters so invoice numbering (key 'n') is untouched */
+function ticketNo(counterKey,prefix){const n=(+localStorage[counterKey]||0)+1;localStorage[counterKey]=n;const dv=localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2,4).toUpperCase());return prefix+'-'+dv+'-'+String(n).padStart(4,'0')}
+/* stock ledger: an append-only movement log per item, shown as a running total instead of a raw number */
+async function logStock(dept,itemId,itemName,type,qty,note){await save('stockmove',{dept,itemId,itemName,type,qty,note:note||'',at:now(),by:(S.user&&S.user.id)||''})}
+function stockLedger(dept,itemId){return L('stockmove').filter(m=>m.dept==dept&&m.itemId==itemId).sort((a,b)=>a.at>b.at?1:-1)}
+/* audit log: lightweight append-only trail of sensitive actions (voids, discounts, price/stock edits,
+   role changes, returns) for the owner to review -- kind:'audit', old->new value where meaningful */
+async function audit(action,detail){await save('audit',{action,detail:detail||'',by:(S.user&&S.user.id)||'',at:now()})}
+/* CRM auto-collect: every customer-linked transaction (sale, rental, membership check-in) bumps
+   visits/lastVisit on that phone's customer record automatically, no extra staff action needed */
+async function touchCustomer(phone,name){if(!phone)return;const c=rec(phone)||{id:phone,name:name||'',phone,points:0,credit:0,visits:0};c.visits=(c.visits||0)+1;c.lastVisit=now();if(name)c.name=name;await save('customer',c,phone);return c}
 /* local store: rec = every record, out = unsent changes (keyed by id, latest wins, never dropped) */
 const idb=new Promise(r=>{const q=indexedDB.open('bpos1',1);q.onupgradeneeded=()=>['rec','out','meta'].forEach(s=>q.result.createObjectStore(s,{keyPath:s=='meta'?'k':'id'}));q.onsuccess=()=>r(q.result)});
 const tx=async(s,m,f)=>{const d=await idb;return new Promise((res,rej)=>{const t=d.transaction(s,m),q=f(t.objectStore(s));t.oncomplete=()=>res(q.result);t.onerror=()=>rej(t.error)})};
@@ -150,7 +173,9 @@ ${o.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${(DM[l.dept]||{}).label||l.dep
 ${Object.entries(t.byRate||{}).map(([rt,a])=>`<tr><td>GST ${rt}%</td><td>${a}</td></tr>`).join('')}
 <tr><td><b>Total</b></td><td><b>${t.total}</b></td></tr></table>
 <br><div>Paid: ${(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')||'-'}</div><div>Thank you for your business!</div></div>`}
-function wa(o){let p=((o.cust||{}).phone||prompt('Customer phone')||'').replace(/\D/g,'');if(!p)return;if(p.length==10)p='91'+p;open('https://wa.me/'+p+'?text='+encodeURIComponent(`Thanks for visiting ${cfg().name}!\nBill ${o.no}\n`+o.lines.map(l=>`${l.qty}x ${l.name}: ${inr(l.price*l.qty)}`).join('\n')+`\nTotal: ${inr(o.t.total)}`),'_blank')}
+function wa(o){let p=((o.cust||{}).phone||prompt('Customer phone')||'').replace(/\D/g,'');if(!p)return;if(p.length==10)p='91'+p;
+ const link=location.origin+'/?inv='+o.id;
+ open('https://wa.me/'+p+'?text='+encodeURIComponent(`Thanks for visiting ${cfg().name}!\nBill ${o.no}\n`+o.lines.map(l=>`${l.qty}x ${l.name}: ${inr(l.price*l.qty)}`).join('\n')+`\nTotal: ${inr(o.t.total)}\n\nView/print your bill: ${link}`),'_blank')}
 function modal(...k){const o=h('div',{class:'ov',onclick:e=>e.target==o&&o.remove()},h('div',{class:'md'},...k));document.body.append(o);return()=>o.remove()}
 function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
 function printBarcode(code,title){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
@@ -167,16 +192,24 @@ function lineDisc(l){const v=prompt('Line discount %',l.disc||0);if(v==null)retu
 function denomPicker(onChange){const vals={};const grid=h('div',{class:'denoms'},...DENOMS.map(d=>{const inp=h('input',{type:'number',min:0,placeholder:'0',oninput:e=>{vals[d.v]=Math.max(0,+e.target.value||0);onChange(sum())}});return h('label',{},'₹'+d.v+(d.rare?' *':''),inp)}));
  function sum(){return DENOMS.reduce((a,d)=>a+(vals[d.v]||0)*d.v,0)}
  return{el:grid,sum,vals}}
-async function applyLoyalty(o,cust,phone,redeemPts){if(!phone)return;const c=cust?{...cust}:{id:phone,name:o.cust.name||'',phone,points:0,credit:0};
+async function applyLoyalty(o,cust,phone,redeemPts){if(!phone)return;const c=cust?{...cust}:{id:phone,name:o.cust.name||'',phone,points:0,credit:0,visits:0};
  const earn=Math.floor(o.t.total/(cfg().ptsPer||100));c.points=Math.max(0,(c.points||0)+earn-(redeemPts||0));
  const spent=(o.pays||[]).filter(p=>p.m=='credit').reduce((a,p)=>a+p.amt,0);c.credit=Math.max(0,(c.credit||0)-spent);c.name=o.cust.name||c.name;
+ c.visits=(c.visits||0)+1;c.lastVisit=now();
  await save('customer',c,phone)}
-function custModal(o){const phone=normPhone(o.cust.phone);if(!phone)return alert('Enter a phone number first');let c=rec(phone)||{id:phone,name:o.cust.name||'',phone,points:0,credit:0};
+function waMsg(phone,text){if(!phone)return;let p=phone.replace(/\D/g,'');if(p.length==10)p='91'+p;open('https://wa.me/'+p+'?text='+encodeURIComponent(text),'_blank')}
+function custModal(o){const phone=normPhone((o.cust&&o.cust.phone)||o.phone||'');if(!phone)return alert('Enter a phone number first');let c=rec(phone)||{id:phone,name:(o.cust&&o.cust.name)||'',phone,points:0,credit:0,visits:0};
  const hist=L('order').filter(x=>x.status=='paid'&&normPhone((x.cust||{}).phone)==phone).sort((a,b)=>b.paidAt>a.paidAt?1:-1).slice(0,15);
+ const mem=L('membership').filter(m=>normPhone(m.phone)==phone).sort((a,b)=>b.purchasedAt>a.purchasedAt?1:-1)[0];
+ const openRentals=L('rental').filter(r=>normPhone((r.cust||{}).phone)==phone&&r.status=='open');
  const adjAmt=h('input',{type:'number',placeholder:'Amount'}),adjNote=h('input',{placeholder:'Reason (e.g. return credit)'});
- const x=modal(h('h3',{},esc(c.name||'Customer')+' · '+phone),h('div',{},'Points: '+(c.points||0)+' · Store credit: '+inr(c.credit||0)),
-  can('m')?h('div',{class:'row'},adjAmt,adjNote,h('button',{class:'sm',onclick:async()=>{const a=+adjAmt.value;if(!a)return;c.credit=r2((c.credit||0)+a);c.name=c.name||o.cust.name||'';await save('customer',c,phone);x();render()}},'Add credit')):null,
+ const msgText=h('textarea',{rows:3,style:'width:100%',placeholder:'Offer / promo message'},'Hi '+(c.name||'')+'! We have a special offer for you at '+cfg().name+'. ');
+ const x=modal(h('h3',{},esc(c.name||'Customer')+' · '+phone),h('div',{},'Points: '+(c.points||0)+' · Store credit: '+inr(c.credit||0)+' · Visits: '+(c.visits||0)+(c.lastVisit?' · Last visit '+new Date(c.lastVisit).toLocaleDateString():'')),
+  mem?h('div',{},'Membership: '+(MEMBER_PLANS.find(p=>p.id==mem.plan)||{}).label+' · Used '+r2(mem.hoursUsed||0)+'/'+mem.hoursTotal+' hrs · '+(mem.status=='active'&&mem.expiresAt>now()?'Active until '+new Date(mem.expiresAt).toLocaleDateString():'Expired')):null,
+  openRentals.length?h('div',{},'Open rentals: '+openRentals.map(r=>r.bookTitle).join(', ')):null,
+  can('m')?h('div',{class:'row'},adjAmt,adjNote,h('button',{class:'sm',onclick:async()=>{const a=+adjAmt.value;if(!a)return;c.credit=r2((c.credit||0)+a);c.name=c.name||(o.cust&&o.cust.name)||'';await save('customer',c,phone);await audit('credit_adjust',phone+' '+(a>0?'+':'')+a+' ('+adjNote.value+')');x();render()}},'Add credit')):null,
   h('h4',{},'Recent purchases'),...hist.map(hh=>h('div',{class:'row'},hh.no+' · '+new Date(hh.paidAt).toLocaleDateString(),inr(hh.t.total))),!hist.length?h('p',{},'No past purchases.'):null,
+  h('h4',{},'Message for offers'),msgText,h('button',{class:'sm',onclick:()=>waMsg(phone,msgText.value)},'Open WhatsApp'),
   h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
  let redeemPts=0,changeVals={};const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
@@ -202,15 +235,15 @@ function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
   h('div',{class:'row'},...['cash','upi','card','credit'].map(m=>h('button',{onclick:()=>addPay(m)},m.toUpperCase()))),
   list,info,changeSec,h('div',{class:'actions'},done,h('button',{onclick:()=>x()},'Cancel')));
  up()}
-async function adjustStock(o,sign){for(const l of o.lines){
- if(l.dept=='book'){const b=rec(l.id);if(b)await save('book',{...b,stock:Math.max(0,(b.stock||0)+sign*l.qty)},b.id)}
- else if(l.dept=='stat'){const s=rec(l.id);if(s)await save('stationery',{...s,stock:Math.max(0,(s.stock||0)+sign*l.qty)},s.id)}
- else{const it=rec(l.id);if(it&&it.track)await save('cafeitem',{...it,stock:Math.max(0,(it.stock||0)+sign*l.qty)},it.id)}}}
+async function adjustStock(o,sign,moveType){const mtype=moveType||(o.type=='return'?'return':'sale');for(const l of o.lines){
+ if(l.dept=='book'){const b=rec(l.id);if(b){await save('book',{...b,stock:Math.max(0,(b.stock||0)+sign*l.qty)},b.id);await logStock('book',b.id,b.title,mtype,sign*l.qty,o.no)}}
+ else if(l.dept=='stat'){const s=rec(l.id);if(s){await save('stationery',{...s,stock:Math.max(0,(s.stock||0)+sign*l.qty)},s.id);await logStock('stat',s.id,s.name,mtype,sign*l.qty,o.no)}}
+ else{const it=rec(l.id);if(it&&it.track){await save('cafeitem',{...it,stock:Math.max(0,(it.stock||0)+sign*l.qty)},it.id);await logStock('cafe',it.id,it.name,mtype,sign*l.qty,o.no)}}}}
 async function hold(){const o=S.cur;if(!o.lines.length)return;if(!o.no)o.no=nextNo();o.status='held';await persist();S.cur=null;render()}
 function returnedQty(orderNo,dept,id){return L('order').filter(o=>o.type=='return'&&o.refNo==orderNo).reduce((a,o)=>a+o.lines.filter(l=>l.dept==dept&&l.id==id).reduce((s,l)=>s-l.qty,0),0)}
 async function doReturn(order,line,max){const v=prompt('Quantity to return (max '+max+')',max);const qn=Math.floor(+v);if(!(qn>0)||qn>max)return;const method=(prompt('Refund via cash/upi/card','cash')||'cash').toLowerCase();if(!['cash','upi','card'].includes(method))return alert('cash, upi or card');
  const amt=r2(line.price*qn*(1-(line.disc||0)/100));const ro={id:uid(),no:nextNo(),type:'return',refNo:order.no,lines:[{dept:line.dept,id:line.id,name:line.name,price:line.price,gst:line.gst||0,qty:-qn,disc:line.disc||0}],status:'paid',created:now(),by:S.user.id,cust:order.cust||{},paidAt:now(),pays:[{m:method,amt:-amt}]};
- ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);prn(rcpt(ro));render()}
+ ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);await audit('return',ro.no+' ref '+order.no+' qty '+qn+' amt '+amt);prn(rcpt(ro));render()}
 /* table orders (from QR self-order) */
 function loadTorder(o){if(!S.cur)S.cur=newOrder();o.lines.forEach(l=>addLine('cafe',l.id,l.name,l.price,0));save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='pos';render()})}
 function rejectTorder(o){save('torder',{...o,status:'rejected'},o.id).then(render)}
@@ -235,7 +268,7 @@ V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=t
   h('div',{class:'row'},h('input',{placeholder:'Customer name',style:'width:48%',value:o.cust.name||'',oninput:e=>o.cust.name=e.target.value}),h('input',{placeholder:'Phone',style:'width:48%',value:o.cust.phone||'',oninput:e=>o.cust.phone=e.target.value})),
   h('div',{class:'row'},h('button',{class:'sm',onclick:()=>custModal(o)},'Customer lookup')),
   h('div',{class:'row'},'Subtotal',inr(t.sub)),
-  h('div',{class:'row'},h('span',{},'Discount ',can('m')?h('button',{class:'sm',onclick:()=>{const v=prompt('Order discount, like 10% or 50');if(v==null)return;o.disc=v?{t:v.includes('%')?'%':'flat',v:parseFloat(v)||0}:null;render()}},'Set'):null),'-'+inr(t.d)),
+  h('div',{class:'row'},h('span',{},'Discount ',can('m')?h('button',{class:'sm',onclick:()=>{const v=prompt('Order discount, like 10% or 50');if(v==null)return;o.disc=v?{t:v.includes('%')?'%':'flat',v:parseFloat(v)||0}:null;audit('order_discount',(o.no||'cart')+' -> '+v);render()}},'Set'):null),'-'+inr(t.d)),
   h('div',{class:'row'},'GST',inr(t.tax)),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(t.total))),
   h('div',{class:'row'},h('button',{onclick:hold,disabled:!o.lines.length},'Hold'),h('button',{class:'p',onclick:pay,disabled:!o.lines.length},'Pay')),
   h('button',{onclick:async()=>{if(o.no&&o.status=='held'){if(!can('m'))return alert('Manager only');if(!confirm('Cancel held sale?'))return;o.status='void';await persist()}S.cur=null;render()}},'Clear sale'));
@@ -243,7 +276,7 @@ V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=t
  return h('div',{class:'g'},browse,cartSheet)};
 V.orders=()=>{const os=L('order').filter(o=>o.t).sort((a,b)=>b.created>a.created?1:-1),held=os.filter(o=>o.status=='held');
  return h('div',{},h('div',{class:'card'},h('h3',{},'Held sales ('+held.length+')'),...held.map(o=>h('div',{class:'row'},o.no+' · '+(o.cust.name||'walk-in'),h('b',{},inr(o.t.total)),h('button',{class:'p sm',onclick:()=>{S.cur=structuredClone(o);S.tab='pos';render()}},'Resume')))),
- h('div',{class:'card'},h('h3',{},'Recent bills'),...os.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},o.no+(o.status=='void'?' (void)':'')+(o.type=='return'?' (return)':''),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1);render()}},'Void'):null)))))};
+ h('div',{class:'card'},h('h3',{},'Recent bills'),...os.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},o.no+(o.status=='void'?' (void)':'')+(o.type=='return'?' (return)':''),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null)))))};
 V.torders=()=>{const pend=L('torder').filter(o=>o.status=='pending');const byTable={};pend.forEach(o=>{(byTable[o.table]=byTable[o.table]||[]).push(o)});
  return h('div',{class:'card'},h('h3',{},'Table orders ('+pend.length+')'),h('p',{class:'hint'},'From customers who scanned a table QR code. Load an order into the cart to bill it, or reject it.'),
   Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{class:'card',style:'margin:8px 0'},h('h4',{},esc(os[0].tableName||('Table '+tid))),
@@ -268,7 +301,7 @@ function rangeOrders(from,to){return L('order').filter(o=>o.status=='paid'&&o.pa
 V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).toLocaleDateString('en-CA')==S.d),ex=L('exp').filter(e=>e.d==S.d),m={cash:0,upi:0,card:0,credit:0},it={},dept={book:0,cafe:0,stat:0},sm=f=>r2(os.reduce((a,o)=>a+f(o),0));
  os.forEach(o=>{(o.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt);o.lines.forEach(l=>{const amt=l.price*l.qty*(1-(l.disc||0)/100);dept[l.dept]=(dept[l.dept]||0)+amt;const k=l.name;(it[k]=it[k]||{q:0,a:0}).q+=l.qty;it[k].a+=amt})});
  const byRateDay={};os.forEach(o=>Object.entries(o.t.byRate||{}).forEach(([rt,a])=>byRateDay[rt]=r2((byRateDay[rt]||0)+a)));
- const et=r2(ex.reduce((a,e)=>a+e.amt,0)),ec=h('input',{placeholder:'Expense (e.g. milk, invoice packing)'}),ea=h('input',{type:'number',placeholder:'Amount'}),R_=(a,b)=>h('div',{class:'row'},a,h('b',{},b));
+ const et=r2(ex.reduce((a,e)=>a+e.amt,0)),ecat=h('select',{},...EXP_CATS.map(c=>h('option',{value:c},c))),ec=h('input',{placeholder:'Description'}),ea=h('input',{type:'number',placeholder:'Amount'}),R_=(a,b)=>h('div',{class:'row'},a,h('b',{},b));
  const lowBooks=L('book').filter(b=>b.reorder!=null&&(b.stock||0)<=b.reorder),lowCafe=L('cafeitem').filter(i=>i.track&&i.reorder!=null&&(i.stock||0)<=i.reorder),lowStat=L('stationery').filter(i=>i.reorder!=null&&(i.stock||0)<=i.reorder);
  const from=S.rf||S.d,to=S.rt||S.d,ro=rangeOrders(from,to);const trend={};ro.forEach(o=>{const d=o.paidAt.slice(0,10);trend[d]=r2((trend[d]||0)+o.t.total)});const trendMax=Math.max(1,...Object.values(trend));
  const best={};ro.forEach(o=>o.lines.forEach(l=>{const k=l.dept+'|'+l.name,net=r2(l.price*l.qty*(1-(l.disc||0)/100));(best[k]=best[k]||{qty:0,rev:0,dept:l.dept,name:l.name}).qty+=l.qty;best[k].rev=r2(best[k].rev+net)}));
@@ -278,9 +311,11 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
   R_('Bills',os.length),R_('Books sales',inr(dept.book||0)),R_('Cafe sales',inr(dept.cafe||0)),R_('Stationery sales',inr(dept.stat||0)),R_('Sales',inr(sm(o=>o.t.total))),R_('Discounts',inr(sm(o=>o.t.d))),R_('Tax collected',inr(sm(o=>o.t.tax))),
   h('h4',{},'GST breakdown'),...Object.entries(byRateDay).map(([rt,a])=>R_(rt+'% GST',inr(a))),!Object.keys(byRateDay).length?h('p',{class:'hint'},'No taxed sales today.'):null,
   R_('Cash',inr(m.cash||0)),R_('UPI',inr(m.upi||0)),R_('Card',inr(m.card||0)),R_('Store credit used',inr(m.credit||0)),R_('Expenses',inr(et)),R_('Cash expected in drawer',inr((m.cash||0)-et))),
- h('div',{class:'card'},h('h3',{},'Add expense'),h('div',{class:'row'},ec,ea,h('button',{onclick:async()=>{if(!ec.value||!(+ea.value>0))return;await save('exp',{note:ec.value,amt:+ea.value,d:S.d});render()}},'Add')),...ex.map(e=>h('div',{class:'row'},e.note,inr(e.amt)))),
+ h('div',{class:'card'},h('h3',{},'Add expense'),h('div',{class:'row'},ecat,ec,ea,h('button',{onclick:async()=>{if(!(+ea.value>0))return;await save('exp',{cat:ecat.value,note:ec.value,amt:+ea.value,d:S.d});render()}},'Add')),
+  ...ex.map(e=>h('div',{class:'row'},(e.cat?'['+e.cat+'] ':'')+(e.note||''),inr(e.amt)))),
  h('div',{class:'card'},h('h3',{},'Items sold today'),h('table',{class:'rtable'},...Object.entries(it).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>h('tr',{},h('td',{'data-label':'Item'},k),h('td',{'data-label':'Qty'},v.q),h('td',{'data-label':'Amount'},inr(v.a)))))),
  h('div',{class:'card'},h('h3',{},'Low stock'),...lowBooks.map(b=>h('div',{class:'row'},b.title+' (book)',h('b',{class:'low'},b.stock||0))),...lowCafe.map(i=>h('div',{class:'row'},i.name+' (cafe)',h('b',{class:'low'},i.stock||0))),...lowStat.map(i=>h('div',{class:'row'},i.name+' (stationery)',h('b',{class:'low'},i.stock||0))),(lowBooks.length+lowCafe.length+lowStat.length)?null:h('p',{},'Nothing low.')),
+ can('m')?stockAdjCard():null,
  h('div',{class:'card'},h('h3',{},'Range report & exports'),h('div',{class:'row'},h('input',{type:'date',value:from,onchange:e=>{S.rf=e.target.value;render()}}),h('input',{type:'date',value:to,onchange:e=>{S.rt=e.target.value;render()}})),
   R_('Bills',ro.length),R_('Sales',inr(r2(ro.reduce((a,o)=>a+o.t.total,0)))),R_('Tax collected',inr(r2(ro.reduce((a,o)=>a+o.t.tax,0)))),R_('Est. profit (revenue − cost)',inr(r2(revTot-costTot))),
   h('h4',{},'Daily trend'),...Object.entries(trend).sort().map(([d,v])=>h('div',{class:'row'},d,h('div',{style:'flex:1;background:#eee;border-radius:4px;overflow:hidden;height:10px;margin:0 8px'},h('div',{style:'width:'+(v/trendMax*100)+'%;background:var(--accent);height:100%'})),inr(v))),
@@ -316,16 +351,111 @@ function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'
  const add=h('button',{onclick:()=>{if(!pick.value)return;const[dept,id]=pick.value.split(':');const it=items.find(x=>x.dept==dept&&x.id==id);if(!it||!(+qn.value>0))return;lines.push({dept,itemId:id,name:it.name,qty:+qn.value,cost:+cs.value||it.cost,received:0});refresh()}},'Add line');
  const x=modal(h('h3',{},'New purchase order'),supSel,h('div',{class:'row'},pick,qn,cs,add),linesEl,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),supplier:supSel.value||null,lines,status:'ordered',created:now(),by:S.user.id});x();render()}},'Create PO'),h('button',{onclick:()=>x()},'Cancel')))}
-function receiveLine(po,i,q){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
- const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=(it.stock||0)+q;it.cost=l.cost;save(kind,it,it.id)}
- l.received=(l.received||0)+q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':'partial';save('po',po,po.id).then(render)}
+async function receiveLine(po,i,q){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
+ const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=(it.stock||0)+q;it.cost=l.cost;await save(kind,it,it.id);await logStock(l.dept,it.id,it.name||it.title,'purchase',q,po.no)}
+ l.received=(l.received||0)+q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':'partial';
+ po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);render()}
+/* supplier outstanding: PO payable auto = sum(received qty * cost per line); a "record payment" logs
+   against po.payments[] so outstanding = payable - sum(payments), aggregated per supplier below */
+function poOutstanding(po){return r2((po.payable||0)-(po.payments||[]).reduce((a,p)=>a+p.amt,0))}
+function recordPoPayment(po){const v=prompt('Payment amount (outstanding '+inr(poOutstanding(po))+')');const a=+v;if(!(a>0))return;
+ po.payments=po.payments||[];po.payments.push({amt:a,at:now(),by:S.user.id});save('po',po,po.id).then(()=>{audit('supplier_payment',po.no+' '+inr(a));render()})}
 V.po=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const pos=L('po').sort((a,b)=>b.created>a.created?1:-1);
+ const bySup={};pos.forEach(po=>{const k=po.supplier||'—';bySup[k]=r2((bySup[k]||0)+poOutstanding(po))});
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Suppliers'),h('button',{class:'p sm',onclick:()=>supForm({})},'Add supplier')),
-   ...L('supplier').map(s=>h('div',{class:'row'},s.name+' · '+(s.phone||''),h('button',{class:'sm',onclick:()=>supForm(s)},'Edit')))),
+   ...L('supplier').map(s=>h('div',{class:'row'},s.name+' · '+(s.phone||''),h('span',{},bySup[s.id]?h('b',{class:bySup[s.id]>0?'low':''},'Outstanding '+inr(bySup[s.id])):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit'))))),
   h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Purchase orders'),h('button',{class:'p sm',onclick:poForm},'New PO')),
-   ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier))),
+   ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier)),po.payable?h('span',{},'Payable '+inr(po.payable)+' · Outstanding '+inr(poOutstanding(po))):null),
     ...po.lines.map((l,i)=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),
-     po.status!='received'?h('span',{},h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:36px;padding:6px'}),h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive')):null))))))};
+     po.status!='received'?h('span',{},h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:36px;padding:6px'}),h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive')):null)),
+    poOutstanding(po)>0?h('div',{class:'row'},h('button',{class:'sm',onclick:()=>recordPoPayment(po)},'Record supplier payment')):null))))};
+/* stock adjustments: manager/owner records damaged/lost/found stock with a reason, separate from a
+   sale or purchase -- both adjusts the item's stock and appends a 'stockmove' ledger entry */
+function stockAdjItems(){return[...L('book').map(b=>({dept:'book',id:b.id,name:b.title})),...L('cafeitem').filter(i=>i.track).map(i=>({dept:'cafe',id:i.id,name:i.name})),...L('stationery').map(i=>({dept:'stat',id:i.id,name:i.name}))]}
+async function commitStockAdj(dept,id,type,qty,note){const kind=DEPT_KIND[dept],it=rec(id);if(!it)return;
+ it.stock=Math.max(0,(it.stock||0)+qty);await save(kind,it,it.id);await logStock(dept,it.id,it.name||it.title,type,qty,note);await audit('stock_'+type,(it.name||it.title)+' '+(qty>0?'+':'')+qty+(note?' ('+note+')':''))}
+function stockLedgerModal(dept,id,name){const rows=stockLedger(dept,id);let run=0;const withRun=rows.slice().reverse().map(m=>{run+=m.qty;return{...m,run}}).reverse();
+ const x=modal(h('h3',{},'Stock ledger — '+esc(name)),h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Type'),h('th',{},'Qty'),h('th',{},'Running total'),h('th',{},'Note')),
+  ...withRun.map(m=>h('tr',{},h('td',{'data-label':'When'},new Date(m.at).toLocaleString()),h('td',{'data-label':'Type'},m.type),h('td',{'data-label':'Qty'},(m.qty>0?'+':'')+m.qty),h('td',{'data-label':'Running total'},m.run),h('td',{'data-label':'Note'},esc(m.note||''))))),
+  !rows.length?h('p',{},'No movements logged yet.'):null,h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
+function stockAdjCard(){const items=stockAdjItems();const pick=h('select',{},...items.map(it=>h('option',{value:it.dept+':'+it.id},it.name)));
+ const type=h('select',{},...['damage','lost','found','adjustment'].map(t=>h('option',{value:t},t)));
+ const qn=h('input',{type:'number',placeholder:'Qty (+found, -damaged/lost)'}),note=h('input',{placeholder:'Reason'});
+ return h('div',{class:'card'},h('h3',{},'Stock adjustments'),h('p',{class:'hint'},'Record damaged, lost or found stock outside a normal sale/purchase.'),
+  h('div',{class:'row'},pick,type,qn,note),h('button',{onclick:async()=>{if(!pick.value||!(+qn.value))return alert('Pick an item and a non-zero qty');const[dept,id]=pick.value.split(':');await commitStockAdj(dept,id,type.value,Math.trunc(+qn.value),note.value);qn.value='';note.value='';render()}},'Record adjustment'))}
+/* book rentals: deposit = book price at rental time, book stock decrements like a sale since the
+   physical copy leaves the shop. Return computes elapsed days -> refund tier (see rentalRefundPct). */
+function rentTierText(){return 'Returned within 7 days: 80% refund. Within 30 days: 70%. Within 60 days: 60%. After 60 days: deposit forfeited.'}
+function rentalReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)}<hr><b>Refund schedule if returned:</b><br>${rentTierText()}<br><hr>Bring this slip (or your phone number) when you return the book.`}
+function rentalRefundReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>Rental return ${r.no}<br>Book: ${esc(r.bookTitle)}<br>Held ${r.heldDays} day(s)<br>Deposit ${inr(r.deposit)} · Refund ${r.refundPct*100}% = ${inr(r.refund)}<br>Refunded: ${(r.refundPays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
+function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0);const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
+ const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
+ const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
+ useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
+ const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
+ const x=modal(h('h3',{},'Rent a book'),pick,name,phone,h('div',{class:'row'},'Method',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,h('p',{class:'hint'},rentTierText()),
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=books.find(x=>x.id==pick.value);if(!b)return alert('No book selected');const ph=normPhone(phone.value);
+   const r={id:uid(),no:ticketNo('n_rnt','RNT'),bookId:b.id,bookTitle:b.title,deposit:b.price,cust:{name:name.value.trim(),phone:ph},rentedAt:now(),by:S.user.id,status:'open',pays:[{m:method.value,amt:(method.value=='cash'&&useDenom.checked)?dp.sum():b.price}]};
+   await save('book',{...b,stock:Math.max(0,(b.stock||0)-1)},b.id);await logStock('book',b.id,b.title,'sale',-1,r.no);
+   await save('rental',r,r.id);if(ph)await touchCustomer(ph,name.value.trim());x();prn(rentalReceipt(r));render()}},'Rent & print slip'),h('button',{onclick:()=>x()},'Cancel')))}
+function returnRentalModal(r){const days=Math.floor((Date.now()-new Date(r.rentedAt))/86400000);const pct=rentalRefundPct(days);const refund=r2(r.deposit*pct);
+ const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
+ const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
+ useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
+ const x=modal(h('h3',{},'Return rental — '+esc(r.bookTitle)),h('p',{},'Held '+days+' day(s). Refund tier: '+(pct*100)+'% of '+inr(r.deposit)+' = '+inr(refund)+'.'),
+  refund>0?h('div',{class:'row'},'Refund via',method):null,refund>0?h('label',{},useDenom,' Cash — count by denomination'):null,cdw,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=rec(r.bookId);if(b)await save('book',{...b,stock:(b.stock||0)+1},b.id);if(b)await logStock('book',b.id,b.title,'return',1,r.no);
+   const rr={...r,status:'returned',returnedAt:now(),heldDays:days,refundPct:pct,refund,refundPays:refund>0?[{m:method.value,amt:refund}]:[]};
+   await save('rental',rr,r.id);await audit('rental_return',r.no+' '+days+'d '+(pct*100)+'% = '+inr(refund));x();prn(rentalRefundReceipt(rr));render()}},'Confirm return'),h('button',{onclick:()=>x()},'Cancel')))}
+V.rentals=()=>{const open=L('rental').filter(r=>r.status=='open').sort((a,b)=>a.rentedAt<b.rentedAt?-1:1);
+ const lookup=h('input',{placeholder:'Search by phone or ticket no',value:S.rentQ||'',oninput:e=>{S.rentQ=e.target.value;render()}});
+ const q=(S.rentQ||'').toLowerCase();const shown=q?open.filter(r=>(r.no||'').toLowerCase().includes(q)||normPhone((r.cust||{}).phone).includes(q.replace(/\D/g,''))):open;
+ return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Book rentals'),h('button',{class:'p sm',onclick:rentBookModal},'Rent a book')),h('p',{class:'hint'},rentTierText())),
+  h('div',{class:'card'},h('h3',{},'Open rentals ('+open.length+')'),lookup,
+   ...shown.map(r=>h('div',{class:'row'},h('div',{},r.no+' · '+esc(r.bookTitle),h('br'),h('small',{},esc((r.cust||{}).name||'')+' '+esc((r.cust||{}).phone||'')+' · since '+new Date(r.rentedAt).toLocaleDateString())),h('span',{},inr(r.deposit),h('button',{class:'sm',onclick:()=>returnRentalModal(r)},'Return rental')))),
+   !shown.length?h('p',{},'No open rentals.'):null))};
+/* co-reading membership: monthly hour-bundle plans, one active membership per phone. Expiry is a
+   rolling 30 days from purchase (simpler & fairer than a calendar month, since a mid-month buyer
+   would otherwise get a short first period). Check-in/out tracks elapsed hours against the balance;
+   overage is allowed (not hard-blocked) and surfaced clearly, matching how a real space would treat
+   a paying regular. */
+function activeMembership(phone){return L('membership').filter(m=>normPhone(m.phone)==phone).sort((a,b)=>b.purchasedAt>a.purchasedAt?1:-1)[0]}
+function openCheckin(phone){return L('checkin').find(c=>normPhone(c.phone)==phone&&c.status=='in')}
+function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h('option',{value:p.id},p.label+' — '+inr(p.price))));
+ const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
+ const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
+ const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
+ useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
+ const x=modal(h('h3',{},'Sell / renew membership'),plan,name,phone,h('div',{class:'row'},'Pay via',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const p=MEMBER_PLANS.find(x=>x.id==plan.value);const ph=normPhone(phone.value);if(!ph)return alert('Phone required');
+   const paid=(method.value=='cash'&&useDenom.checked)?dp.sum():p.price;
+   const m={id:uid(),no:ticketNo('n_mem','MEM'),phone:ph,name:name.value.trim(),plan:p.id,hoursTotal:p.hours,hoursUsed:0,purchasedAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString(),status:'active',pays:[{m:method.value,amt:paid}]};
+   await save('membership',m,m.id);await touchCustomer(ph,name.value.trim());x();prn(`<b>${esc(cfg().name)}</b><br>Membership ${m.no}<br>${esc(m.name)} ${ph}<br>Plan: ${p.label}<br>Paid: ${inr(paid)}<br>Valid until ${new Date(m.expiresAt).toLocaleDateString()}<br>Thank you!`);render()}},'Sell / renew'),h('button',{onclick:()=>x()},'Cancel')))}
+function checkinModal(){const phone=h('input',{placeholder:'Member phone'});const out=h('div');
+ phone.oninput=()=>{const ph=normPhone(phone.value);const m=ph?activeMembership(ph):null;out.replaceChildren(m?h('p',{},esc(m.name)+' · '+r2((m.hoursTotal||0)-(m.hoursUsed||0))+' hrs remaining · expires '+new Date(m.expiresAt).toLocaleDateString()):h('p',{class:'hint'},ph?'No membership found for this phone.':''))};
+ const x=modal(h('h3',{},'Check in'),phone,out,h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const ph=normPhone(phone.value);if(!ph)return alert('Enter phone');const m=activeMembership(ph);if(!m)return alert('No membership found — sell one first');
+  if(openCheckin(ph))return alert('Already checked in');
+  await save('checkin',{id:uid(),phone:ph,name:m.name,membershipId:m.id,inAt:now(),status:'in'});await touchCustomer(ph,m.name);x();render()}},'Check in'),h('button',{onclick:()=>x()},'Cancel')))}
+async function checkoutMember(c){const hrs=r2((Date.now()-new Date(c.inAt))/3600000);const m=L('membership').find(x=>x.id==c.membershipId)||activeMembership(c.phone);
+ const remaining=m?r2((m.hoursTotal||0)-(m.hoursUsed||0)):0;const over=hrs>remaining;
+ if(!confirm('Check out '+c.name+'? Session: '+hrs+' hrs.'+(over?' This exceeds their remaining '+remaining+' hrs (overage '+r2(hrs-remaining)+' hrs) — allowed.':'')))return;
+ if(m){m.hoursUsed=r2((m.hoursUsed||0)+hrs);await save('membership',m,m.id)}
+ await save('checkin',{...c,status:'out',outAt:now(),hours:hrs},c.id);render()}
+V.membership=()=>{const inNow=L('checkin').filter(c=>c.status=='in');
+ return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Co-reading membership'),h('button',{class:'p sm',onclick:buyMembershipModal},'Sell / renew membership')),
+   ...MEMBER_PLANS.map(p=>h('div',{class:'row'},p.label,inr(p.price)))),
+  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Checked in ('+inNow.length+')'),h('button',{class:'p sm',onclick:checkinModal},'Check in a member')),
+   ...inNow.map(c=>{const elapsed=r2((Date.now()-new Date(c.inAt))/3600000);return h('div',{class:'row'},esc(c.name)+' · '+c.phone,h('span',{},elapsed+' hrs so far',h('button',{class:'sm',onclick:()=>checkoutMember(c)},'Check out')))}),
+   !inNow.length?h('p',{},'No one checked in right now.'):null))};
+/* CRM: customer directory built automatically from touchCustomer() at checkout/rental/checkin */
+V.crm=()=>{const q=(S.crmQ||'').toLowerCase();let custs=L('customer').sort((a,b)=>(b.lastVisit||'')>(a.lastVisit||'')?1:-1);
+ if(q)custs=custs.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q));
+ return h('div',{class:'card'},h('h3',{},'Customers ('+custs.length+')'),h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search name or phone',value:S.crmQ||'',oninput:e=>{S.crmQ=e.target.value;render()}})),
+  h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Phone'),h('th',{},'Visits'),h('th',{},'Last visit'),h('th',{},'Points'),h('th',{},'Credit'),h('th',{},'Membership'),h('th',{})),
+   ...custs.map(c=>{const m=activeMembership(c.phone);return h('tr',{},h('td',{'data-label':'Name'},esc(c.name||'')),h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
+    h('td',{'data-label':'Points'},c.points||0),h('td',{'data-label':'Credit'},inr(c.credit||0)),h('td',{'data-label':'Membership'},m&&m.status=='active'&&m.expiresAt>now()?(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label:'—'),
+    h('td',{},h('button',{class:'sm',onclick:()=>custModal({cust:{name:c.name,phone:c.phone}})},'View')))}),
+  !custs.length?h('p',{},'No customers yet — they are added automatically at checkout, rental or membership check-in.'):null))};
 /* CSV import */
 function parseCSV(text){const rows=[];let row=[],cur='',q=false;text=text.replace(/\r\n/g,'\n');
  for(let i=0;i<text.length;i++){const c=text[i];
@@ -364,11 +494,12 @@ function importModal(dept){const inp=h('input',{type:'file',accept:'.csv'});cons
 function bookForm(b){const f={title:h('input',{value:b.title||'',placeholder:'Title'}),author:h('input',{value:b.author||'',placeholder:'Author'}),publisher:h('input',{value:b.publisher||'',placeholder:'Publisher'}),isbn:h('input',{value:b.isbn||'',placeholder:'ISBN / barcode'}),
   cat:h('select',{},...L('cat').filter(c=>c.dept=='book').map(c=>h('option',{value:c.id,selected:c.id==b.cat},c.name))),
   supplier:h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==b.supplier},s.name))),
-  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'})};
+  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'})};
  const genBtn=h('button',{class:'sm',onclick:()=>{f.isbn.value=genCode('BK')}},'Generate barcode');
- const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.price,f.stock,f.reorder,h('p',{class:'hint'},'Books are GST-exempt (0%) by law.'),
+ const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.price,f.stock,f.reorder,f.hsn,h('p',{class:'hint'},'Books are GST-exempt (0%) by law.'),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.title.value||!f.cat.value||!(+f.price.value>0))return alert('Title, category and sell price are needed.');
-   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,price:+f.price.value,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0},b.id);x();render()}},'Save'),
+   if(b.id&&(b.stock!=+f.stock.value||b.price!=+f.price.value))await audit('edit_book',b.title+' stock '+(b.stock??0)+'->'+f.stock.value+' price '+(b.price??0)+'->'+f.price.value);
+   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,price:+f.price.value,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim()},b.id);x();render()}},'Save'),
    h('button',{onclick:()=>{if(!f.isbn.value)return alert('Enter or generate a barcode first');printBarcode(f.isbn.value,f.title.value)}},'Print barcode'),
    b.id?h('button',{onclick:async()=>{await save('book',b,b.id,true);x();render()}},'Delete'):null))}
 function stockForm(dept,it){const kind=DEPT_KIND[dept];
@@ -376,12 +507,13 @@ function stockForm(dept,it){const kind=DEPT_KIND[dept];
   price:h('input',{type:'number',value:it.price??'',placeholder:'Price'}),cost:h('input',{type:'number',value:it.cost??'',placeholder:'Cost price (optional, for margin reports)'}),gst:h('input',{type:'number',value:it.gst??DM[dept].gst,placeholder:'GST %'}),
   track:dept=='cafe'?h('input',{type:'checkbox',checked:it.track}):null,sku:dept=='stat'?h('input',{value:it.sku||'',placeholder:'SKU / barcode'}):null,
   supplier:dept=='stat'?h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==it.supplier},s.name))):null,
-  stock:h('input',{type:'number',value:it.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:it.reorder??5,placeholder:'Reorder threshold'})};
+  stock:h('input',{type:'number',value:it.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:it.reorder??5,placeholder:'Reorder threshold'}),hsn:h('input',{value:it.hsn||'',placeholder:'HSN code (optional)'})};
  const genBtn=dept=='stat'?h('button',{class:'sm',onclick:()=>{f.sku.value=genCode('ST')}},'Generate barcode'):null;
  const x=modal(h('h3',{},it.id?'Edit '+DM[dept].label+' item':'New '+DM[dept].label+' item'),
-  f.name,f.cat,f.price,f.cost,f.gst,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,dept=='stat'?f.supplier:null,f.stock,f.reorder,
+  f.name,f.cat,f.price,f.cost,f.gst,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,dept=='stat'?f.supplier:null,f.stock,f.reorder,f.hsn,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value||!f.cat.value||!(+f.price.value>0))return alert('Name, category and price are needed.');
-   const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value};
+   if(it.id&&(it.stock!=+f.stock.value||it.price!=+f.price.value))await audit('edit_'+kind,f.name.value+' stock '+(it.stock??0)+'->'+f.stock.value+' price '+(it.price??0)+'->'+f.price.value);
+   const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,hsn:f.hsn.value.trim()};
    if(dept=='stat'){data.sku=f.sku.value.trim();data.supplier=f.supplier.value||null}
    await save(kind,data,it.id);x();render()}},'Save'),
    dept=='stat'?h('button',{onclick:()=>{if(!f.sku.value)return alert('Enter or generate a barcode first');printBarcode(f.sku.value,f.name.value)}},'Print barcode'):null,
@@ -394,7 +526,7 @@ V.inv=()=>{if(!can('o'))return h('p',{},'Owner only.');const catsFor=d=>L('cat')
    ...catsFor(dept).map(c=>h('span',{class:'tag',style:'margin-right:6px'},c.name,' ',h('button',{class:'sm',onclick:()=>confirm('Delete category?')&&save('cat',c,c.id,true).then(render)},'x')))),
   h('div',{class:'card'},h('h3',{},DM[dept].label+' ('+items.length+')'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Price'),h('th',{},'GST%'),h('th',{},'Stock'),h('th',{})),
    ...items.map(it=>{const label=dept=='book'?it.title:it.name;const tracked=dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder;
-    return h('tr',{},h('td',{'data-label':'Name'},label),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit')))}))))};
+    return h('tr',{},h('td',{'data-label':'Name'},label),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))}))))};
  const tables=L('table');
  return h('div',{},sect('book'),sect('cafe'),sect('stat'),
   h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Cafe tables (QR self-order)'),h('button',{class:'p sm',onclick:()=>{const n=prompt('Table name/number, e.g. T1');n&&save('table',{name:n}).then(render)}},'Add table')),
@@ -402,12 +534,16 @@ V.inv=()=>{if(!can('o'))return h('p',{},'Owner only.');const catsFor=d=>L('cat')
 V.staff=()=>{if(!can('o'))return h('p',{},'Owner only.');
  return h('div',{class:'card'},h('h3',{},'Staff'),h('p',{class:'hint'},'To add a brand-new staff login, create the user in Supabase Authentication first (the app cannot create auth users without a service role key) — see SETUP-GUIDE.md section 6 — then set their role here.'),
   h('table',{class:'rtable'},h('tr',{},h('th',{},'Email'),h('th',{},'Role')),
-   ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else p.role=e.target.value}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))};
+   ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))};
 V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l,t)=>h('label',{style:'display:grid;gap:4px'},l,h('input',{type:t||'text',value:s[k],style:'width:100%',oninput:e=>F[k]=t=='number'?+e.target.value:e.target.value}));
  return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),h('button',{class:'p',onclick:async()=>{await save('set',{...s,...F},'settings');alert('Saved')}},'Save')),
- h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')))};
-function tabs(){const T=[['pos','Sell'],['orders','Orders'],['torders','Tables']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
-const TAB_ICON={pos:'cart',orders:'orders',torders:'table',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
+ h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')),
+ h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
+  h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
+   ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
+  !L('audit').length?h('p',{},'No audit entries yet.'):null))};
+function tabs(){const T=[['pos','Sell'],['orders','Orders'],['torders','Tables'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
+const TAB_ICON={pos:'cart',orders:'orders',torders:'table',rentals:'rental',membership:'clock',crm:'people',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
 function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},icon(TAB_ICON[k]||'more',18),' '+n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reload()}
 function render(){const T=tabs();
@@ -448,5 +584,16 @@ function renderPublic(){const q=PUB.q.trim().toLowerCase();const items=PUB.items
    h('input',{placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
  $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu)}
-(function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else{boot()}})();
+/* public, no-login printable invoice: index.html?inv=<orderId> -- reached via the WhatsApp bill-share
+   link. Anonymous, scoped to exactly one order id (an unguessable UUID -- the same "anyone with the
+   link" trust model as a typical shareable bill/receipt), via the anon_read_order policy below. */
+async function bootInvoicePublic(id){$('#app').textContent='Loading invoice…';
+ const{data,error}=await sb.from('records').select('id,kind,data,deleted').eq('kind','order').eq('id',id).eq('deleted',false).maybeSingle();
+ if(error||!data){$('#app').replaceChildren(h('div',{class:'wrap'},h('p',{},'Invoice not found or no longer available.')));return}
+ const{data:setRows}=await sb.from('records').select('data').eq('kind','settings').eq('deleted',false);
+ R.settings={data:(setRows&&setRows[0]&&setRows[0].data)||{}};
+ const o=data.data,card=h('div',{class:'card'});card.innerHTML=inv(o);
+ $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(cfg().name||'Invoice'))),
+  h('div',{class:'wrap'},card,h('div',{class:'row'},h('button',{class:'p',onclick:()=>prnA4(inv(o))},'Print'))))}
+(function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else if(p.get('inv')){bootInvoicePublic(p.get('inv'))}else{boot()}})();
 </script></body></html>
