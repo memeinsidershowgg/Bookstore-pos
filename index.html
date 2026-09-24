@@ -2,20 +2,23 @@
 <style>
 :root{--book:#4b3f8f;--cafe:#8a5a2b;--stat:#1f7a6c;--accent:#141414;--rail:#141414;--bg:#f7f7f5;--card:#fff;--ink:#1a1a1a;--sub:#6b6b6b;--line:#e3e3de;--r:10px}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.35 system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px}
+body{margin:0;font:14px/1.32 system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px}
+h3{margin:0;font-size:15px}
+h4{margin:6px 0 2px;font-size:12.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.03em}
+p{margin:4px 0}
 /* Density pass: default controls are 36-38px, not 44px -- this is a high-frequency till, not a
    leisurely form. Text inputs keep 16px font (iOS auto-zooms focused inputs below that), everything
    else runs a touch smaller. Pay/Complete-and-print/Send-order keep extra headroom via .cta. */
-button,select{font:inherit;font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:inherit;min-height:36px}
-input,textarea{font:inherit;font-size:16px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:inherit;min-height:36px}
+button,select{font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:inherit;min-height:34px}
+input,textarea{font:inherit;font-size:16px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:inherit;min-height:34px}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
-button.sm{min-height:30px;padding:4px 8px;font-size:12px}
+button.sm{min-height:28px;padding:3px 7px;font-size:11px}
 button.p,button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-button.cta{min-height:46px;font-size:15px;font-weight:700}
+button.cta{min-height:44px;font-size:14px;font-weight:700}
 button:disabled{opacity:.4}
-button.pill{border-radius:999px;padding:6px 13px}
-button.pill.sm{padding:4px 11px}
-label{display:flex;align-items:center;gap:5px;font-size:13px}
+button.pill{border-radius:999px;padding:5px 12px}
+button.pill.sm{padding:3px 10px}
+label{display:flex;align-items:center;gap:5px;font-size:12px}
 .ico{display:inline-flex;flex:none;align-items:center;justify-content:center;color:currentColor}
 .ico svg{display:block;width:100%;height:100%}
 header.top{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--accent);color:#fff;position:sticky;top:0;z-index:6}
@@ -42,7 +45,7 @@ body{padding-bottom:56px}
 .wrap{max-width:1200px;margin:0 auto;padding:8px;display:grid;gap:8px}
 .g{display:grid;grid-template-columns:1fr 360px;gap:8px}
 @media(max-width:840px){.g{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;margin-bottom:8px}
 .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:6px}
 .items button{text-align:left;min-height:58px;display:flex;flex-direction:column;gap:1px;align-items:flex-start;padding:7px 9px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0;flex-wrap:wrap}
@@ -59,8 +62,9 @@ body{padding-bottom:56px}
  .cartsheet .sheetbody{padding:0 10px 10px}
 }
 @media(min-width:841px){.cartsheet .peek{display:none}.cartsheet .sheetbody{padding:10px}}
-table{width:100%;border-collapse:collapse;font-size:14px}
-td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:11px;color:var(--sub);font-weight:600}
 /* Mobile row collapse: dense 2-line layout for narrow/many-column tables (data-2col opt-in from JS)
    instead of one line per column; the plain rtable fallback (still available) stacks one td per line. */
 @media(max-width:700px){
@@ -100,8 +104,6 @@ small{color:var(--sub)}.low{color:#b3261e;font-weight:700}.oos{opacity:.45}
 .stat-tile.warn{border-color:#b3261e;background:#fdeceb}
 </style></head><body><div id=app></div>
 <script src=https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js></script>
-<script src=https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js></script>
 <script src=/config.js></script>
 <script>
 const C=window.CFG||{},sb=supabase.createClient(C.url,C.key),S={tab:'pos',dept:'book',cur:null,role:'cashier',q:'',d:new Date().toLocaleDateString('en-CA'),ret:'',cartOpen:false},R={},V={};let busy=0,PROFILES=[];
@@ -158,6 +160,18 @@ async function gstinLookup(gstin){const s=cfg();if(!s.gstinApiUrl||!s.gstinApiKe
  try{const r=await fetch(s.gstinApiUrl+encodeURIComponent(gstin),{headers:{Authorization:'Bearer '+s.gstinApiKey}});if(!r.ok)return null;return await r.json()}catch{return null}}
 const DEPT_KIND={book:'book',cafe:'cafeitem',stat:'stationery'};
 const DENOMS=[{v:2000,rare:true},{v:500},{v:200},{v:100},{v:50},{v:20},{v:10},{v:5},{v:2},{v:1}];
+/* QR/barcode libs load lazily (not as blocking <script> tags) with a retry across two CDNs, since a
+   plain <script src> that fails once (slow/blocked network) left QRCode/JsBarcode undefined forever
+   with no way to recover -- that was "Table QR is not working". ensureLib loads on first real need
+   (also kicked off eagerly, non-blocking, from boot()) and is safe to call repeatedly -- it caches the
+   in-flight/settled promise so a second click while still loading just waits on the same attempt. */
+const LIB_URLS={qrcode:['https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js','https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'],
+ jsbarcode:['https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js','https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js']};
+const libPromise={};
+function loadScript(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+function ensureLib(name,globalName){if(typeof window[globalName]!='undefined')return Promise.resolve(true);
+ if(!libPromise[name])libPromise[name]=(async()=>{for(const url of LIB_URLS[name]){try{await loadScript(url);if(typeof window[globalName]!='undefined')return true}catch{}}delete libPromise[name];return false})();
+ return libPromise[name]}
 const normPhone=p=>(p||'').replace(/\D/g,'');
 /* expense categories: fixed set per the reference architecture doc, so reports can be grouped */
 const EXP_CATS=['Electricity','Internet','Rent','Salaries','Packaging','Transport','Repairs','Stationery','Cleaning','Marketing','Maintenance','Other'];
@@ -214,7 +228,8 @@ async function persist(){const o=S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await s
 /* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels, via an offscreen print-iframe */
 function prn(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
 function prnA4(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
-function rcpt(o){const s=cfg(),t=o.t;return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}${s.taxid?'<br>Tax ID '+esc(s.taxid):''}<hr>${o.no}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''} · ${new Date(o.paidAt||o.created).toLocaleString()}<br>${esc((o.cust||{}).name)} ${esc((o.cust||{}).phone)}<hr><table width=100%>${o.lines.map(l=>`<tr><td>${l.qty}x ${esc(l.name)}<br><small>${(DM[l.dept]||{}).label||l.dept}${l.gst?' · GST '+l.gst+'%':''}</small></td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}</table><hr>Subtotal ${t.sub}<br>${t.d?'Discount -'+t.d+'<br>':''}${t.interState?(t.igst?'IGST: '+t.igst+'<br>':''):((t.cgst?'CGST: '+t.cgst+'<br>':'')+(t.sgst?'SGST: '+t.sgst+'<br>':''))}<b>Total ${t.total}</b><br>${o.type=='return'?'Refunded '+(o.pays||[]).map(p=>p.m+' '+Math.abs(p.amt)).join(', '):'Paid '+(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
+function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')).join(', ');
+ return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}${s.taxid?'<br>Tax ID '+esc(s.taxid):''}<hr>${o.no}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''} · ${new Date(o.paidAt||o.created).toLocaleString()}<br>${esc((o.cust||{}).name)} ${esc((o.cust||{}).phone)}<hr><table width=100%>${o.lines.map(l=>`<tr><td>${l.qty}x ${esc(l.name)}<br><small>${(DM[l.dept]||{}).label||l.dept}${l.gst?' · GST '+l.gst+'%':''}</small></td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}</table><hr>Subtotal ${t.sub}<br>${t.d?'Discount -'+t.d+'<br>':''}${t.interState?(t.igst?'IGST: '+t.igst+'<br>':''):((t.cgst?'CGST: '+t.cgst+'<br>':'')+(t.sgst?'SGST: '+t.sgst+'<br>':''))}<b>Total ${t.total}</b><br>${o.type=='return'?'Refunded '+payLine:'Paid '+payLine}${o.change?'<br>Change given: '+inr(o.change)+(o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':''):''}<br>Thank you!`}
 /* CA-format invoice: when billing a B2B party (o.cust.gstin set) shows the buyer's GSTIN + registered
    name/address and the CGST/SGST/IGST breakdown a GST-compliant B2B tax invoice needs; a plain retail
    bill (no GSTIN) keeps the simpler combined-GST-line look it always had, just with the split applied. */
@@ -241,11 +256,11 @@ function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Mat
    "Table QR is not working". Both entry points now check the global first and show a clear, actionable
    alert instead of failing silently, and printTableQR also catches any error QRCode.toCanvas itself
    raises (e.g. an oversized/invalid payload) so the failure is always visible to staff. */
-function printBarcode(code,title){if(typeof JsBarcode=='undefined')return alert('Barcode library did not load (check your internet connection) — try again in a moment.');
+async function printBarcode(code,title){if(!await ensureLib('jsbarcode','JsBarcode'))return alert('Barcode library could not load — check your internet connection and try again.');
  try{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
  catch(e){console.error('printBarcode',e);alert('Could not generate the barcode: '+e.message)}}
 function tableQRUrl(t){return location.origin+'/?order=1&t='+encodeURIComponent(t.id)+'&tn='+encodeURIComponent(t.name)}
-function printTableQR(t){if(typeof QRCode=='undefined')return alert('QR code library did not load (check your internet connection) — try again in a moment.');
+async function printTableQR(t){if(!await ensureLib('qrcode','QRCode'))return alert('QR code library could not load — check your internet connection and try again.');
  const url=tableQRUrl(t),cv=document.createElement('canvas');
  try{QRCode.toCanvas(cv,url,{width:200,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
   prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
@@ -303,8 +318,9 @@ function custModal(o){const phone=normPhone((o.cust&&o.cust.phone)||o.phone||'')
   h('h4',{},'Rental history'),...allRentals.map(r=>h('div',{class:'row'},esc(r.bookTitle)+' · '+(r.status=='open'?'Open since '+new Date(r.rentedAt).toLocaleDateString():'Returned '+new Date(r.returnedAt).toLocaleDateString()),r.status=='open'?h('b',{},'Deposit '+inr(r.deposit)):h('span',{},inr(r.refund)+' refunded'))),!allRentals.length?h('p',{},'No rental history.'):null,
   h('h4',{},'Message for offers'),msgText,h('button',{class:'sm',onclick:()=>waMsg(phone,msgText.value)},'Open WhatsApp'),
   h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
+function denomSummary(v){return Object.entries(v||{}).filter(([,n])=>n>0).map(([d,n])=>n+'×₹'+d).join(', ')}
 function pay(){const o=S.cur;if(!o.lines.length)return;
- let redeemPts=0,changeVals={};const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
+ let redeemPts=0;const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
  if(cust&&cust.b2b)o.interState=!!(cust.state&&cfg().homeState&&cust.state!==cfg().homeState);
  o.t=tot(o);
  const due=()=>r2(o.t.total-redeemPts-P.reduce((a,x)=>a+x.amt,0));
@@ -320,15 +336,24 @@ function pay(){const o=S.cur;if(!o.lines.length)return;
  const interState=h('input',{type:'checkbox',checked:!!(cust&&cust.b2b&&cust.state&&cfg().homeState&&cust.state!==cfg().homeState)});
  interState.onchange=()=>{o.interState=interState.checked;o.t=tot(o);up()};
  const redeemRow=cust&&cust.points>0?h('div',{class:'row'},h('input',{type:'number',id:'rdp',placeholder:'Redeem points (1pt=₹1)',style:'width:170px'}),h('button',{class:'sm',onclick:()=>{redeemPts=Math.max(0,Math.min(cust.points,+$('#rdp').value||0));up()}},'Apply')):null;
- const list=h('div');const info=h('b');const changeSec=h('div');
- const up=()=>{list.replaceChildren(...P.map((p,i)=>h('div',{class:'row'},p.m.toUpperCase()+' '+inr(p.amt),h('button',{class:'sm',onclick:()=>{P.splice(i,1);up()}},'x'))));
+ const list=h('div');const info=h('b');
+ /* Change-given-back denomination: one persistent picker (created once, just shown/hidden) instead of a
+    fresh one on every up() re-render -- recreating it on every redeem/add/remove-payment click was
+    wiping whatever the cashier had already typed, which is what showed up as "denomination ... not
+    working". Same idea for cashDenom above: it's created once and reused. */
+ const changeDenom=denomPicker(()=>{});
+ const changeWrap=h('div',{style:'display:none'},h('p',{},'Record change given back:'),changeDenom.el);
+ const changeSec=h('div',{},changeWrap);
+ const up=()=>{list.replaceChildren(...P.map((p,i)=>h('div',{class:'row'},h('span',{},p.m.toUpperCase()+' '+inr(p.amt),p.denoms?h('small',{},' ('+denomSummary(p.denoms)+')'):null),h('button',{class:'sm',onclick:()=>{P.splice(i,1);up()}},'x'))));
   const dv=due();info.textContent=dv>0?'Due '+inr(dv):'Change to return '+inr(-dv);amt.value=Math.max(dv,0);done.disabled=dv>0;
-  changeSec.replaceChildren();if(dv<0){const chg=denomPicker(()=>{changeVals=chg.vals});changeVals=chg.vals;changeSec.append(h('p',{},'Record change given back:'),chg.el)}};
+  changeWrap.style.display=dv<0?'block':'none'};
  const addPay=m=>{let a=(m=='cash'&&useDenom.checked)?cashDenom.sum():+amt.value;if(!(a>0))return;
+  let denoms=null;
   if(m=='credit'){a=Math.min(a,due(),(cust&&cust.credit)||0);if(a<=0)return alert('No store credit available for this customer')}
   else if(m!='cash')a=Math.min(a,due());
-  if(a<=0)return;P.push({m,amt:a});up()};
- const done=h('button',{class:'p cta',disabled:true,onclick:async()=>{o.pays=P;o.redeemPts=redeemPts;o.change=Math.max(-due(),0);o.changeDenoms=changeVals;o.status='paid';o.paidAt=now();
+  else if(useDenom.checked){denoms={...cashDenom.vals};Object.keys(cashDenom.vals).forEach(k=>cashDenom.vals[k]=0);cashDenom.el.querySelectorAll('input').forEach(i=>i.value='')}
+  if(a<=0)return;P.push(denoms?{m,amt:a,denoms}:{m,amt:a});up()};
+ const done=h('button',{class:'p cta',disabled:true,onclick:async()=>{const dueNow=due();o.pays=P;o.redeemPts=redeemPts;o.change=Math.max(-dueNow,0);o.changeDenoms=dueNow<0?{...changeDenom.vals}:null;o.status='paid';o.paidAt=now();
   if(cust&&cust.b2b)o.cust={...o.cust,gstin:cust.gstin||'',legalName:cust.legalName||'',address:cust.address||'',state:cust.state||''};
   await persist();await adjustStock(o,-1);await applyLoyalty(o,cust,phone,redeemPts);x();prn(rcpt(o));S.cur=null;S.cartOpen=false;render()}},'Complete and print');
  const x=modal(h('h3',{},'Pay '+inr(o.t.total)),custRow,redeemRow,
@@ -402,6 +427,14 @@ function exportInvoiceSummaryCSV(from,to){const rows=[['Invoice No','Date/Time',
 function rangeOrders(from,to){return L('order').filter(o=>o.status=='paid'&&o.paidAt&&o.paidAt.slice(0,10)>=from&&o.paidAt.slice(0,10)<=to)}
 V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).toLocaleDateString('en-CA')==S.d),ex=L('exp').filter(e=>e.d==S.d),m={cash:0,upi:0,card:0,credit:0},it={},dept={book:0,cafe:0,stat:0},sm=f=>r2(os.reduce((a,o)=>a+f(o),0));
  os.forEach(o=>{(o.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt);o.lines.forEach(l=>{const amt=l.price*l.qty*(1-(l.disc||0)/100);dept[l.dept]=(dept[l.dept]||0)+amt;const k=l.name;(it[k]=it[k]||{q:0,a:0}).q+=l.qty;it[k].a+=amt})});
+ /* Rental deposits & membership fees are real money taken over the counter (and refunds real money
+    paid back out), so they must count toward the cash/UPI/card totals and "cash expected in drawer" --
+    they were previously invisible to Sales/reporting entirely, which is what "rent a book amount
+    should be added in sale money, and returned from it" was pointing at. They're money movement, not
+    product revenue, so they get their own rows rather than being folded into "Sales". */
+ const rentedToday=L('rental').filter(r=>r.rentedAt&&r.rentedAt.slice(0,10)==S.d),returnedToday=L('rental').filter(r=>r.status=='returned'&&r.returnedAt&&r.returnedAt.slice(0,10)==S.d),memToday=L('membership').filter(mm=>mm.purchasedAt&&mm.purchasedAt.slice(0,10)==S.d);
+ const rentalIn=r2(rentedToday.reduce((a,r)=>a+(r.pays||[]).reduce((s,p)=>s+p.amt,0),0)),rentalOut=r2(returnedToday.reduce((a,r)=>a+(r.refundPays||[]).reduce((s,p)=>s+p.amt,0),0)),memIn=r2(memToday.reduce((a,mm)=>a+(mm.pays||[]).reduce((s,p)=>s+p.amt,0),0));
+ rentedToday.forEach(r=>(r.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt));returnedToday.forEach(r=>(r.refundPays||[]).forEach(p=>m[p.m]=(m[p.m]||0)-p.amt));memToday.forEach(mm=>(mm.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt));
  const byRateDay={};os.forEach(o=>Object.entries(o.t.byRate||{}).forEach(([rt,a])=>byRateDay[rt]=r2((byRateDay[rt]||0)+a)));
  const et=r2(ex.reduce((a,e)=>a+e.amt,0)),ecat=h('select',{},...EXP_CATS.map(c=>h('option',{value:c},c))),ec=h('input',{placeholder:'Description'}),ea=h('input',{type:'number',placeholder:'Amount'}),R_=(a,b)=>h('div',{class:'row'},a,h('b',{},b));
  const lowBooks=L('book').filter(b=>b.reorder!=null&&(b.stock||0)<=b.reorder),lowCafe=L('cafeitem').filter(i=>i.track&&i.reorder!=null&&(i.stock||0)<=i.reorder),lowStat=L('stationery').filter(i=>i.reorder!=null&&(i.stock||0)<=i.reorder);
@@ -423,6 +456,7 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Day report'),h('input',{type:'date',value:S.d,onchange:e=>{S.d=e.target.value;render()}})),
   R_('Bills',os.length),R_('Books sales',inr(dept.book||0)),R_('Cafe sales',inr(dept.cafe||0)),R_('Stationery sales',inr(dept.stat||0)),R_('Sales',inr(sm(o=>o.t.total))),R_('Discounts',inr(sm(o=>o.t.d))),R_('Tax collected',inr(sm(o=>o.t.tax))),
   h('h4',{},'GST breakdown'),...Object.entries(byRateDay).map(([rt,a])=>R_(rt+'% GST',inr(a))),!Object.keys(byRateDay).length?h('p',{class:'hint'},'No taxed sales today.'):null,
+  R_('Rental deposits collected',inr(rentalIn)),R_('Rental refunds paid',inr(rentalOut)),R_('Membership sales',inr(memIn)),
   R_('Cash',inr(m.cash||0)),R_('UPI',inr(m.upi||0)),R_('Card',inr(m.card||0)),R_('Store credit used',inr(m.credit||0)),R_('Expenses',inr(et)),R_('Cash expected in drawer',inr((m.cash||0)-et))),
  h('div',{class:'card'},h('h3',{},'Add expense'),h('div',{class:'row'},ecat,ec,ea,h('button',{onclick:async()=>{if(!(+ea.value>0))return;await save('exp',{cat:ecat.value,note:ec.value,amt:+ea.value,d:S.d});render()}},'Add')),
   ...ex.map(e=>h('div',{class:'row'},(e.cat?'['+e.cat+'] ':'')+(e.note||''),inr(e.amt)))),
@@ -449,8 +483,14 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
 function lastShift(){return L('shift').sort((a,b)=>b.at>a.at?1:-1)[0]}
 function shiftIsOpen(){const s=lastShift();return !!(s&&s.type=='open')}
 function expectedCash(openAt,openTotal){const paidSince=Object.values(R).filter(r=>r.kind=='order'&&!r.deleted&&r.data.status=='paid'&&r.data.paidAt>=openAt).map(r=>r.data);
- const cashIn=r2(paidSince.reduce((a,o)=>a+(o.pays||[]).filter(p=>p.m=='cash').reduce((s,p)=>s+p.amt,0),0));
- const cashOut=r2(paidSince.reduce((a,o)=>a+(o.change||0),0));
+ /* Rentals and memberships take/return real cash too (see V.rep) -- left out here, the drawer count
+    would always look wrong on any day with a rental or membership sale. */
+ const rentedSince=Object.values(R).filter(r=>r.kind=='rental'&&!r.deleted&&r.data.rentedAt>=openAt).map(r=>r.data);
+ const returnedSince=Object.values(R).filter(r=>r.kind=='rental'&&!r.deleted&&r.data.status=='returned'&&r.data.returnedAt>=openAt).map(r=>r.data);
+ const memSince=Object.values(R).filter(r=>r.kind=='membership'&&!r.deleted&&r.data.purchasedAt>=openAt).map(r=>r.data);
+ const cashSum=(rows,f)=>r2(rows.reduce((a,o)=>a+(f(o)||[]).filter(p=>p.m=='cash').reduce((s,p)=>s+p.amt,0),0));
+ const cashIn=r2(cashSum(paidSince,o=>o.pays)+cashSum(rentedSince,o=>o.pays)+cashSum(memSince,o=>o.pays));
+ const cashOut=r2(paidSince.reduce((a,o)=>a+(o.change||0),0)+cashSum(returnedSince,o=>o.refundPays));
  const expOut=r2(Object.values(R).filter(r=>r.kind=='exp'&&!r.deleted&&r.updated_at>=openAt).reduce((a,r)=>a+(r.data.amt||0),0));
  return r2(openTotal+cashIn-cashOut-expOut)}
 function denomModal(title,onSave){const dp=denomPicker(()=>{totEl.textContent=inr(dp.sum())});const totEl=h('b',{},inr(0));const note=h('input',{placeholder:'Note (optional)'});
@@ -660,8 +700,8 @@ function stockAdjCard(){const items=stockAdjItems();const pick=h('select',{},...
 /* book rentals: deposit = book price at rental time, book stock decrements like a sale since the
    physical copy leaves the shop. Return computes elapsed days -> refund tier (see rentalRefundPct). */
 function rentTierText(){return 'Returned within 7 days: 80% refund. Within 30 days: 70%. Within 60 days: 60%. After 60 days: deposit forfeited.'}
-function rentalReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)}<hr><b>Refund schedule if returned:</b><br>${rentTierText()}<br><hr>Bring this slip (or your phone number) when you return the book.`}
-function rentalRefundReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>Rental return ${r.no}<br>Book: ${esc(r.bookTitle)}<br>Held ${r.heldDays} day(s)<br>Deposit ${inr(r.deposit)} · Refund ${r.refundPct*100}% = ${inr(r.refund)}<br>Refunded: ${(r.refundPays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
+function rentalReceipt(r){const s=cfg();const p=(r.pays||[])[0];return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)} (${p?p.m.toUpperCase():''}${p&&p.denoms&&denomSummary(p.denoms)?' — '+denomSummary(p.denoms):''})<hr><b>Refund schedule if returned:</b><br>${rentTierText()}<br><hr>Bring this slip (or your phone number) when you return the book.`}
+function rentalRefundReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>Rental return ${r.no}<br>Book: ${esc(r.bookTitle)}<br>Held ${r.heldDays} day(s)<br>Deposit ${inr(r.deposit)} · Refund ${r.refundPct*100}% = ${inr(r.refund)}<br>Refunded: ${(r.refundPays||[]).map(p=>p.m+' '+p.amt+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')).join(', ')}<br>Thank you!`}
 function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0&&b.rentable!==false&&(b.status||'active')!='inactive');const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
  const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
  const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
@@ -669,7 +709,8 @@ function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0&&b.renta
  const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
  const x=modal(h('h3',{},'Rent a book'),pick,name,phone,h('div',{class:'row'},'Method',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,h('p',{class:'hint'},rentTierText()),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=books.find(x=>x.id==pick.value);if(!b)return alert('No book selected');const ph=normPhone(phone.value);
-   const r={id:uid(),no:ticketNo('n_rnt','RNT'),bookId:b.id,bookTitle:b.title,deposit:b.price,cust:{name:name.value.trim(),phone:ph},rentedAt:now(),by:S.user.id,status:'open',pays:[{m:method.value,amt:(method.value=='cash'&&useDenom.checked)?dp.sum():b.price}]};
+   const denoms=(method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;
+   const r={id:uid(),no:ticketNo('n_rnt','RNT'),bookId:b.id,bookTitle:b.title,deposit:b.price,cust:{name:name.value.trim(),phone:ph},rentedAt:now(),by:S.user.id,status:'open',pays:[denoms?{m:method.value,amt:dp.sum(),denoms}:{m:method.value,amt:b.price}]};
    await save('book',{...b,stock:Math.max(0,(b.stock||0)-1)},b.id);await logStock('book',b.id,b.title,'sale',-1,r.no);
    await save('rental',r,r.id);if(ph)await touchCustomer(ph,name.value.trim());x();prn(rentalReceipt(r));render()}},'Rent & print slip'),h('button',{onclick:()=>x()},'Cancel')))}
 function returnRentalModal(r){const days=Math.floor((Date.now()-new Date(r.rentedAt))/86400000);const pct=rentalRefundPct(days);const refund=r2(r.deposit*pct);
@@ -679,7 +720,8 @@ function returnRentalModal(r){const days=Math.floor((Date.now()-new Date(r.rente
  const x=modal(h('h3',{},'Return rental — '+esc(r.bookTitle)),h('p',{},'Held '+days+' day(s). Refund tier: '+(pct*100)+'% of '+inr(r.deposit)+' = '+inr(refund)+'.'),
   refund>0?h('div',{class:'row'},'Refund via',method):null,refund>0?h('label',{},useDenom,' Cash — count by denomination'):null,cdw,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=rec(r.bookId);if(b)await save('book',{...b,stock:(b.stock||0)+1},b.id);if(b)await logStock('book',b.id,b.title,'return',1,r.no);
-   const rr={...r,status:'returned',returnedAt:now(),heldDays:days,refundPct:pct,refund,refundPays:refund>0?[{m:method.value,amt:refund}]:[]};
+   const denoms=(refund>0&&method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;
+   const rr={...r,status:'returned',returnedAt:now(),heldDays:days,refundPct:pct,refund,refundPays:refund>0?[denoms?{m:method.value,amt:refund,denoms}:{m:method.value,amt:refund}]:[]};
    await save('rental',rr,r.id);await audit('rental_return',r.no+' '+days+'d '+(pct*100)+'% = '+inr(refund));x();prn(rentalRefundReceipt(rr));render()}},'Confirm return'),h('button',{onclick:()=>x()},'Cancel')))}
 V.rentals=()=>{const open=L('rental').filter(r=>r.status=='open').sort((a,b)=>a.rentedAt<b.rentedAt?-1:1);
  const lookup=h('input',{placeholder:'Search by phone or ticket no',value:S.rentQ||'',oninput:e=>{S.rentQ=e.target.value;render()}});
@@ -702,12 +744,13 @@ function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h(
  useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
  const x=modal(h('h3',{},'Sell / renew membership'),plan,name,phone,h('div',{class:'row'},'Pay via',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const p=MEMBER_PLANS.find(x=>x.id==plan.value);const ph=normPhone(phone.value);if(!ph)return alert('Phone required');
-   const paid=(method.value=='cash'&&useDenom.checked)?dp.sum():p.price;
-   const m={id:uid(),no:ticketNo('n_mem','MEM'),phone:ph,name:name.value.trim(),plan:p.id,hoursTotal:p.hours,hoursUsed:0,purchasedAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString(),status:'active',pays:[{m:method.value,amt:paid}]};
-   await save('membership',m,m.id);await touchCustomer(ph,name.value.trim());x();prn(`<b>${esc(cfg().name)}</b><br>Membership ${m.no}<br>${esc(m.name)} ${ph}<br>Plan: ${p.label}<br>Paid: ${inr(paid)}<br>Valid until ${new Date(m.expiresAt).toLocaleDateString()}<br>Thank you!`);render()}},'Sell / renew'),h('button',{onclick:()=>x()},'Cancel')))}
-function checkinModal(){const phone=h('input',{placeholder:'Member phone'});const out=h('div');
+   const denoms=(method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;const paid=denoms?dp.sum():p.price;
+   const m={id:uid(),no:ticketNo('n_mem','MEM'),phone:ph,name:name.value.trim(),plan:p.id,hoursTotal:p.hours,hoursUsed:0,purchasedAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString(),status:'active',pays:[denoms?{m:method.value,amt:paid,denoms}:{m:method.value,amt:paid}]};
+   await save('membership',m,m.id);await touchCustomer(ph,name.value.trim());x();prn(`<b>${esc(cfg().name)}</b><br>Membership ${m.no}<br>${esc(m.name)} ${ph}<br>Plan: ${p.label}<br>Paid: ${inr(paid)}${denoms&&denomSummary(denoms)?' ('+denomSummary(denoms)+')':''}<br>Valid until ${new Date(m.expiresAt).toLocaleDateString()}<br>Thank you!`);render()}},'Sell / renew'),h('button',{onclick:()=>x()},'Cancel')))}
+function checkinModal(prefillPhone){const phone=h('input',{placeholder:'Member phone',value:prefillPhone||''});const out=h('div');
  phone.oninput=()=>{const ph=normPhone(phone.value);const m=ph?activeMembership(ph):null;const expired=m&&m.expiresAt<=now();
   out.replaceChildren(m?h('p',{class:expired?'low':''},esc(m.name)+' · '+r2((m.hoursTotal||0)-(m.hoursUsed||0))+' hrs remaining · '+(expired?'Expired '+new Date(m.expiresAt).toLocaleDateString()+' — renew before checking in':'expires '+new Date(m.expiresAt).toLocaleDateString())):h('p',{class:'hint'},ph?'No membership found for this phone.':''))};
+ if(prefillPhone)phone.oninput();
  const x=modal(h('h3',{},'Check in'),phone,out,h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const ph=normPhone(phone.value);if(!ph)return alert('Enter phone');const m=activeMembership(ph);if(!m)return alert('No membership found — sell one first');
   if(m.expiresAt<=now())return alert('This membership expired on '+new Date(m.expiresAt).toLocaleDateString()+' — sell/renew a membership first.');
   if(openCheckin(ph))return alert('Already checked in');
@@ -718,19 +761,37 @@ async function checkoutMember(c){const hrs=r2((Date.now()-new Date(c.inAt))/3600
  if(m){m.hoursUsed=r2((m.hoursUsed||0)+hrs);await save('membership',m,m.id)}
  await save('checkin',{...c,status:'out',outAt:now(),hours:hrs},c.id);render()}
 V.membership=()=>{const inNow=L('checkin').filter(c=>c.status=='in');
+ /* All active members (one row per phone, latest membership, not expired) -- previously this tab only
+    showed who's physically checked in right now, with no way to see the full member base at a glance. */
+ const phones=[...new Set(L('membership').map(m=>normPhone(m.phone)))];
+ const activeMembers=phones.map(p=>activeMembership(p)).filter(m=>m&&m.status=='active'&&m.expiresAt>now()).sort((a,b)=>a.name.localeCompare(b.name));
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Co-reading membership'),h('button',{class:'p sm',onclick:buyMembershipModal},'Sell / renew membership')),
    ...MEMBER_PLANS.map(p=>h('div',{class:'row'},p.label,inr(p.price)))),
   h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Checked in ('+inNow.length+')'),h('button',{class:'p sm',onclick:checkinModal},'Check in a member')),
    ...inNow.map(c=>{const elapsed=r2((Date.now()-new Date(c.inAt))/3600000);return h('div',{class:'row'},esc(c.name)+' · '+c.phone,h('span',{},elapsed+' hrs so far',h('button',{class:'sm',onclick:()=>checkoutMember(c)},'Check out')))}),
-   !inNow.length?h('p',{},'No one checked in right now.'):null))};
+   !inNow.length?h('p',{},'No one checked in right now.'):null),
+  h('div',{class:'card'},h('h3',{},'Active members ('+activeMembers.length+')'),
+   ...activeMembers.map(m=>{const plan=(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label||m.plan,remaining=r2((m.hoursTotal||0)-(m.hoursUsed||0)),checkedIn=openCheckin(m.phone);
+    return h('div',{class:'row'},h('div',{},h('b',{},esc(m.name)),h('br'),h('small',{},m.phone+' · '+plan+' · '+remaining+'/'+m.hoursTotal+' hrs left · expires '+new Date(m.expiresAt).toLocaleDateString())),
+     checkedIn?h('span',{class:'tag'},'Checked in'):h('button',{class:'sm',onclick:()=>checkinModal(m.phone)},'Check in'))}),
+   !activeMembers.length?h('p',{},'No active members yet.'):null))};
 /* CRM: customer directory built automatically from touchCustomer() at checkout/rental/checkin */
 V.crm=()=>{const q=(S.crmQ||'').toLowerCase();let custs=L('customer').sort((a,b)=>(b.lastVisit||'')>(a.lastVisit||'')?1:-1);
  if(q)custs=custs.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q));
+ /* Compact 2-line row (see .rtable.t2 CSS) instead of one full-width card per field -- the old plain
+    .rtable stacked all 7 columns as separate label:value lines per customer, ~300px tall each on
+    mobile for 4 rows of text; this is the "customer detail UI is a mess" fix. Desktop still sees the
+    full table (thead + all columns) since the collapse only applies under 700px. The row itself opens
+    the detail modal, so mobile doesn't need a separate button column. */
  return h('div',{class:'card'},h('h3',{},'Customers ('+custs.length+')'),h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search name or phone',value:S.crmQ||'',oninput:e=>{S.crmQ=e.target.value;render()}})),
-  h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Phone'),h('th',{},'Visits'),h('th',{},'Last visit'),h('th',{},'Points'),h('th',{},'Credit'),h('th',{},'Membership'),h('th',{})),
-   ...custs.map(c=>{const m=activeMembership(c.phone);return h('tr',{},h('td',{'data-label':'Name'},esc(c.name||''),c.b2b?h('span',{class:'tag',style:'margin-left:5px'},'B2B'):null),h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
-    h('td',{'data-label':'Points'},c.points||0),h('td',{'data-label':'Credit'},inr(c.credit||0)),h('td',{'data-label':'Membership'},m&&m.status=='active'&&m.expiresAt>now()?(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label:'—'),
-    h('td',{},h('button',{class:'sm',onclick:()=>custModal({cust:{name:c.name,phone:c.phone}})},'View')))}),
+  h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Name'),h('th',{},'Phone'),h('th',{},'Visits'),h('th',{},'Last visit'),h('th',{},'Points'),h('th',{},'Credit'),h('th',{},'Membership'),h('th',{})),
+   ...custs.map(c=>{const m=activeMembership(c.phone),memLabel=m&&m.status=='active'&&m.expiresAt>now()?(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label:null,open=()=>custModal({cust:{name:c.name,phone:c.phone}});
+    return h('tr',{style:'cursor:pointer',onclick:open},
+     h('td',{class:'p1','data-label':'Name'},esc(c.name||'(no name)'),c.b2b?h('span',{class:'tag',style:'margin-left:5px'},'B2B'):null),
+     h('td',{class:'p2','data-label':'Phone'},c.phone+' · '+(c.visits||0)+' visit'+(c.visits==1?'':'s')+' · pts '+(c.points||0)+(c.credit?' · credit '+inr(c.credit):'')+(memLabel?' · '+memLabel:'')),
+     h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
+     h('td',{'data-label':'Points'},c.points||0),h('td',{'data-label':'Credit'},inr(c.credit||0)),h('td',{'data-label':'Membership'},memLabel||'—'),
+     h('td',{},h('button',{class:'sm',onclick:e=>{e.stopPropagation();open()}},'View')))}),
   !custs.length?h('p',{},'No customers yet — they are added automatically at checkout, rental or membership check-in.'):null))};
 /* CSV import */
 function parseCSV(text){const rows=[];let row=[],cur='',q=false;text=text.replace(/\r\n/g,'\n');
@@ -873,6 +934,7 @@ async function seed(){localStorage.seeded=1;const bc=uid(),cc=uid();await save('
  await save('book',{title:'Sample Novel',author:'A. Writer',publisher:'',isbn:'9780000000001',cat:bc,cost:150,price:250,stock:10,reorder:2,gst:0});
  await save('cafeitem',{name:'Filter Coffee',cat:cc,price:60,gst:5,track:false,stock:0,reorder:null})}
 async function boot(){if(!C.url||C.url.includes('YOUR-PROJECT'))return $('#app').replaceChildren(h('div',{class:'md',style:'margin:12vh auto'},h('h3',{},'Setup needed'),'Open config.js and add your Supabase URL and key. See SETUP-GUIDE.md.'));(await all('rec')).forEach(r=>R[r.id]=r);navigator.storage&&navigator.storage.persist&&navigator.storage.persist();navigator.serviceWorker&&navigator.serviceWorker.register('/sw.js');
+ ensureLib('qrcode','QRCode');ensureLib('jsbarcode','JsBarcode');
  let c=JSON.parse(localStorage.u||'null'),ses=null;try{ses=(await sb.auth.getSession()).data.session}catch{}
  if(ses){S.user=ses.user;try{const{data}=await sb.from('profiles').select('role').eq('id',ses.user.id).single();if(data)localStorage.u=JSON.stringify(c={id:ses.user.id,role:data.role})}catch{}}else if(c)S.user={id:c.id};
  if(!S.user)return login();S.role=(c&&c.role)||'cashier';$('#app').textContent='Loading…';addEventListener('online',()=>{sync();setNote()});addEventListener('offline',setNote);
