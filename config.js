@@ -1,1 +1,1 @@
-window.CFG={url:'https://YOUR-PROJECT.supabase.co',key:'YOUR-ANON-OR-PUBLISHABLE-KEY'};
+window.CFG={url:'https://iunjsfnzxzqbhcuryaei.supabase.co',key:'sb_publishable_ySc20KQlm3m4F24Dpk-JaA_VdPMh752'};
