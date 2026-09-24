@@ -463,32 +463,145 @@ V.shift=()=>{const open=shiftIsOpen(),last=lastShift(),hist=L('shift').sort((a,b
   ...hist.map(s=>h('tr',{},h('td',{'data-label':'When'},new Date(s.at).toLocaleString()),h('td',{'data-label':'Type'},s.type),h('td',{'data-label':'Total'},inr(s.total)),h('td',{'data-label':'Variance'},s.type=='close'?inr(s.variance):'—'))))))};
 /* suppliers & purchase orders */
 function supForm(s){const f={name:h('input',{value:s.name||'',placeholder:'Name'}),phone:h('input',{value:s.phone||'',placeholder:'Phone'}),email:h('input',{value:s.email||'',placeholder:'Email'}),addr:h('input',{value:s.addr||'',placeholder:'Address'}),notes:h('input',{value:s.notes||'',placeholder:'Notes'}),
-  gstin:h('input',{value:s.gstin||'',placeholder:'GSTIN'}),legalName:h('input',{value:s.legalName||'',placeholder:'Legal / trade name'}),state:h('input',{value:s.state||'',placeholder:'State (auto-filled from GSTIN)'})};
+  gstin:h('input',{value:s.gstin||'',placeholder:'GSTIN'}),legalName:h('input',{value:s.legalName||'',placeholder:'Legal / trade name'}),state:h('input',{value:s.state||'',placeholder:'State (auto-filled from GSTIN)'}),
+  creditDays:h('input',{type:'number',value:s.creditDays??'',placeholder:'Credit period (days, optional)'})};
  const gstNote=h('p',{class:'hint'},'');
  const fetchBtn=h('button',{class:'sm',onclick:async()=>{const d=gstinDecode(f.gstin.value);if(!d.fmtOk){gstNote.textContent='That does not look like a valid GSTIN format.';return}
   f.state.value=d.stateName||d.stateCode;gstNote.textContent=(d.checksumOk?'Format + checksum valid. ':'Format valid but checksum looks off. ')+'State derived from GSTIN format.';
   const live=await gstinLookup(f.gstin.value);if(live){f.legalName.value=live.legalName||live.tradeName||f.legalName.value;gstNote.textContent+=' Name fetched from the configured verification API.'}
   else if(!cfg().gstinApiKey)gstNote.textContent+=' Add a GSTIN verification API key in Settings to auto-fetch business name & address.'}},'Fetch details');
  const x=modal(h('h3',{},s.id?'Edit supplier':'New supplier'),f.name,f.phone,f.email,f.addr,f.notes,h('h4',{},'GST / B2B details'),h('div',{class:'row'},f.gstin,fetchBtn),f.legalName,f.state,gstNote,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim(),gstin:f.gstin.value.trim().toUpperCase(),legalName:f.legalName.value.trim(),state:f.state.value.trim()},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
+  h('h4',{},'Payment terms'),f.creditDays,h('p',{class:'hint'},'Informational only — used to flag an overdue balance on the supplier statement, not enforced anywhere.'),
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim(),gstin:f.gstin.value.trim().toUpperCase(),legalName:f.legalName.value.trim(),state:f.state.value.trim(),creditDays:f.creditDays.value===''?null:+f.creditDays.value},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
 function supNameOf(id){const s=id&&rec(id);return s?s.name:''}
+/* Purchase Bill entry (Busy Accounting-style): header = party + supplier's own invoice no/date (distinct
+   from this app's internal PO-... id); each line captures Name, Alias/ISBN, Category/section, Unit, GST%
+   itemwise (5/8/12/18 presets + free custom, per the owner's own list -- not "corrected" to the textbook
+   0/5/12/18/28 slabs, since we don't know if 8% is deliberate), Selling price, Purchase price, MRP -- for
+   either an existing catalog item (autofilled, still editable since prices legitimately change bill to
+   bill) or a brand-new item created inline (a real bill often includes fresh stock not yet in the catalog).
+   Confirming the bill immediately receives every line (stock + stockmove + payable), reusing receiveLine
+   the same way the old "Receive" button did, rather than leaving it as a separate partial-receive step --
+   that matches how a bill is actually entered here: after the goods are already in hand. */
+const GST_PRESETS=[5,8,12,18];
 function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id},s.name)));
- const items=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,cost:b.cost||0})),...L('stationery').map(s=>({dept:'stat',id:s.id,name:s.name,cost:s.cost||0}))];
- const pick=h('select',{},...items.map(it=>h('option',{value:it.dept+':'+it.id},it.name)));
- const qn=h('input',{type:'number',placeholder:'Qty',value:1}),cs=h('input',{type:'number',placeholder:'Cost/unit'});
- let lines=[];const linesEl=h('div');const refresh=()=>linesEl.replaceChildren(...lines.map((l,i)=>h('div',{class:'row'},l.name,l.qty+' @ '+inr(l.cost),h('button',{class:'sm',onclick:()=>{lines.splice(i,1);refresh()}},'x'))));
- const add=h('button',{onclick:()=>{if(!pick.value)return;const[dept,id]=pick.value.split(':');const it=items.find(x=>x.dept==dept&&x.id==id);if(!it||!(+qn.value>0))return;lines.push({dept,itemId:id,name:it.name,qty:+qn.value,cost:+cs.value||it.cost,received:0});refresh()}},'Add line');
- const x=modal(h('h3',{},'New purchase order'),supSel,h('div',{class:'row'},pick,qn,cs,add),linesEl,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),supplier:supSel.value||null,lines,status:'ordered',created:now(),by:S.user.id});x();render()}},'Create PO'),h('button',{onclick:()=>x()},'Cancel')))}
-async function receiveLine(po,i,q){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
+ const billNo=h('input',{placeholder:"Supplier's bill / invoice no."}),billDate=h('input',{type:'date',value:new Date().toLocaleDateString('en-CA')});
+ const existing=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,alias:b.isbn||'',cat:b.cat,unit:b.unit||'pcs',gst:0,sell:b.price||0,cost:b.cost||0,mrp:b.mrp??''})),
+                 ...L('stationery').map(s=>({dept:'stat',id:s.id,name:s.name,alias:s.sku||'',cat:s.cat,unit:s.unit||'pcs',gst:s.gst||0,sell:s.price||0,cost:s.cost||0,mrp:s.mrp??''}))];
+ const itemSel=h('select',{},h('option',{value:''},'+ Add new item'),...existing.map(it=>h('option',{value:it.dept+':'+it.id},(DM[it.dept]||{}).label+' — '+it.name)));
+ const deptSel=h('select',{},...['book','stat'].map(d=>h('option',{value:d},DM[d].label)));
+ const catSel=h('select',{});
+ const rebuildCats=()=>{const d=deptSel.value;catSel.replaceChildren(h('option',{value:''},'No category'),...L('cat').filter(c=>c.dept==d).map(c=>h('option',{value:c.id},c.name)))};
+ const nameF=h('input',{placeholder:'Name'}),aliasF=h('input',{placeholder:'Alias / ISBN / SKU'}),newCatF=h('input',{placeholder:'Or type a new category'}),unitF=h('input',{value:'pcs',placeholder:'Unit'});
+ const gstSel=h('select',{},...GST_PRESETS.map(g=>h('option',{value:g},g+'%')),h('option',{value:'custom'},'Custom'));
+ const gstCustom=h('input',{type:'number',placeholder:'Custom GST %',style:'display:none'});
+ gstSel.onchange=()=>{gstCustom.style.display=gstSel.value=='custom'?'':'none'};
+ const sellF=h('input',{type:'number',placeholder:'Selling price'}),costF=h('input',{type:'number',placeholder:'Purchase price'}),mrpF=h('input',{type:'number',placeholder:'MRP'}),qtyF=h('input',{type:'number',placeholder:'Qty received',value:1});
+ const genAliasBtn=h('button',{class:'sm',onclick:()=>{if(!nameF.value.trim())return alert('Enter a name first');aliasF.value=genCode(deptSel.value=='book'?'BK':'ST');printBarcode(aliasF.value,nameF.value.trim())}},'Generate & print barcode');
+ const gstRow=h('div',{class:'row'},'GST%',gstSel,gstCustom);
+ const deptRow=h('div',{class:'row'},'Department',deptSel);
+ const aliasRow=h('div',{class:'row'},aliasF,genAliasBtn);
+ const setBookMode=isBook=>{gstRow.style.display=isBook?'none':'';if(isBook){gstSel.value=5;gstCustom.style.display='none'}};
+ deptSel.onchange=()=>{rebuildCats();setBookMode(deptSel.value=='book')};
+ const resetNewFields=()=>{deptSel.disabled=false;deptSel.value='book';rebuildCats();setBookMode(true);nameF.value='';aliasF.value='';newCatF.value='';unitF.value='pcs';gstSel.value=5;gstCustom.value='';gstCustom.style.display='none';sellF.value='';costF.value='';mrpF.value='';qtyF.value=1;genAliasBtn.style.display=''};
+ itemSel.onchange=()=>{if(!itemSel.value){resetNewFields();return}
+  const[dept,id]=itemSel.value.split(':');const it=existing.find(x=>x.dept==dept&&x.id==id);if(!it)return;
+  deptSel.value=dept;deptSel.disabled=true;rebuildCats();setBookMode(dept=='book');catSel.value=it.cat||'';
+  nameF.value=it.name;aliasF.value=it.alias;newCatF.value='';unitF.value=it.unit;
+  if(dept=='book'){gstSel.value=5;gstCustom.value='';gstCustom.style.display='none'}
+  else if(GST_PRESETS.includes(it.gst)){gstSel.value=it.gst;gstCustom.value='';gstCustom.style.display='none'}
+  else{gstSel.value='custom';gstCustom.value=it.gst;gstCustom.style.display=''}
+  sellF.value=it.sell;costF.value=it.cost;mrpF.value=it.mrp;qtyF.value=1;genAliasBtn.style.display='none'};
+ resetNewFields();
+ let lines=[];const linesEl=h('div'),linesHdr=h('h4',{},'Lines (0)');
+ const catNameFor=(dept,catId,newCat)=>newCat?newCat:(catId?catNameOf(catId):'—');
+ const refresh=()=>{linesHdr.textContent='Lines ('+lines.length+')';linesEl.replaceChildren(...lines.map((l,i)=>h('div',{class:'row'},
+   h('span',{},esc(l.name)+' ',h('span',{class:'tag tag-'+l.dept},(DM[l.dept]||{}).label),l.isNew?h('span',{class:'tag'},'new item'):null,
+    h('br'),h('small',{},(l.alias?'Alias '+esc(l.alias)+' · ':'')+catNameFor(l.dept,l.catId,l.newCat)+' · '+esc(l.unit)+' · GST '+l.gst+'%')),
+   h('span',{},l.qty+' @ '+inr(l.cost)+' (sell '+inr(l.sell)+(l.mrp!=null&&l.mrp!==''?', MRP '+inr(l.mrp):'')+')'),
+   h('button',{class:'sm',onclick:()=>{lines.splice(i,1);refresh()}},'x'))));
+  if(!lines.length)linesEl.append(h('p',{class:'hint'},'No lines added yet.'))};
+ refresh();
+ const addLineBtn=h('button',{class:'p sm',onclick:()=>{
+  if(!nameF.value.trim())return alert('Enter an item name');
+  const qty=+qtyF.value;if(!(qty>0))return alert('Enter a qty received > 0');
+  const cost=+costF.value||0,sell=+sellF.value||0,mrp=mrpF.value===''?null:+mrpF.value;
+  const dept=deptSel.value,gst=dept=='book'?0:(gstSel.value=='custom'?(+gstCustom.value||0):+gstSel.value);
+  lines.push({isNew:!itemSel.value,itemId:itemSel.value?itemSel.value.split(':')[1]:null,dept,name:nameF.value.trim(),alias:aliasF.value.trim(),catId:catSel.value||null,newCat:newCatF.value.trim(),unit:unitF.value.trim()||'pcs',gst,sell,cost,mrp,qty});
+  itemSel.value='';resetNewFields();refresh()}},'Add line');
+ const x=modal(h('h3',{},'New purchase bill'),
+  h('h4',{},'Party & bill details'),supSel,h('div',{class:'row'},billNo,billDate),
+  h('h4',{},'Add a line'),itemSel,deptRow,nameF,aliasRow,h('div',{class:'row'},catSel,newCatF),unitF,gstRow,h('div',{class:'row'},sellF,costF,mrpF),qtyF,addLineBtn,
+  linesHdr,linesEl,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');
+   const finalLines=[];
+   for(const ln of lines){
+    let catId=ln.catId;
+    if(ln.newCat){const c=await save('cat',{name:ln.newCat,dept:ln.dept,n:Date.now()});catId=c.id}
+    const kind=DEPT_KIND[ln.dept];let itemId,itemName;
+    if(ln.isNew){
+     const base=ln.dept=='book'
+      ?{title:ln.name,author:'',publisher:'',isbn:ln.alias,cat:catId||null,unit:ln.unit,cost:ln.cost,mrp:ln.mrp,price:ln.sell,stock:0,reorder:2,gst:0}
+      :{name:ln.name,cat:catId||null,unit:ln.unit,price:ln.sell,cost:ln.cost,gst:ln.gst,mrp:ln.mrp,track:true,sku:ln.alias,stock:0,reorder:5};
+     const r_=await save(kind,base);itemId=r_.id;itemName=ln.name}
+    else{
+     const it=rec(ln.itemId);itemId=ln.itemId;itemName=ln.name;
+     const upd={...it,cat:catId||(it&&it.cat)||null,unit:ln.unit,cost:ln.cost,mrp:ln.mrp,price:ln.sell};
+     if(ln.dept=='book')upd.isbn=ln.alias;else{upd.sku=ln.alias;upd.gst=ln.gst}
+     await save(kind,upd,itemId)}
+    finalLines.push({dept:ln.dept,itemId,name:itemName,qty:ln.qty,cost:ln.cost,received:0})}
+   const saved=await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),billNo:billNo.value.trim(),billDate:billDate.value||new Date().toLocaleDateString('en-CA'),supplier:supSel.value||null,lines:finalLines,status:'ordered',created:now(),by:S.user.id,payments:[]});
+   const po=saved.data;// save() returns the wrapped {id,kind,data,...} record; receiveLine works on flat data like every other caller (rec()/L())
+   for(let i=0;i<finalLines.length;i++)await receiveLine(po,i,finalLines[i].qty,true);
+   x();render()}},'Save purchase bill'),h('button',{onclick:()=>x()},'Cancel')))}
+async function receiveLine(po,i,q,silent){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
  const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=(it.stock||0)+q;it.cost=l.cost;await save(kind,it,it.id);await logStock(l.dept,it.id,it.name||it.title,'purchase',q,po.no)}
  l.received=(l.received||0)+q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':'partial';
- po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);render()}
-/* supplier outstanding: PO payable auto = sum(received qty * cost per line); a "record payment" logs
-   against po.payments[] so outstanding = payable - sum(payments), aggregated per supplier below */
+ po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);if(!silent)render()}
+/* supplier outstanding: PO payable auto = sum(received qty * cost per line); a legacy "record payment"
+   (recordPoPayment, still available per-bill from the ledger) logs against po.payments[] --
+   outstanding = payable - sum(payments), aggregated per supplier below */
 function poOutstanding(po){return r2((po.payable||0)-(po.payments||[]).reduce((a,p)=>a+p.amt,0))}
 function recordPoPayment(po){const v=prompt('Payment amount (outstanding '+inr(poOutstanding(po))+')');const a=+v;if(!(a>0))return;
  po.payments=po.payments||[];po.payments.push({amt:a,at:now(),by:S.user.id});save('po',po,po.id).then(()=>{audit('supplier_payment',po.no+' '+inr(a));render()})}
+/* Data-model choice for payments (Busy-style restructuring, judgment call, documented): a real shop
+   pays down its running balance with a supplier on a credit-period cycle, not bill-by-bill -- the
+   owner's own words ("payment sent to party as per credit period time") describe paying against the
+   account, not settling one specific invoice. So the primary payment record is now SUPPLIER-level
+   (kind:'suppayment', keyed to supplier.id, never to one po/bill), alongside the legacy per-PO
+   po.payments[] path above (kept for backward compatibility with data already recorded that way).
+   Outstanding for a supplier = sum(payable across all their bills) - sum(legacy po.payments) -
+   sum(suppayment). Mode-specific reference fields (UTR for UPI, cheque no/date for Cheque, a bank
+   transaction ref for Bank transfer) live directly on the suppayment record. */
+function supPaymentsFor(supplierId){return L('suppayment').filter(p=>p.supplier==supplierId).sort((a,b)=>b.at>a.at?1:-1)}
+function supplierOutstanding(supplierId){const pos=L('po').filter(po=>po.supplier==supplierId);
+ const payable=r2(pos.reduce((a,po)=>a+(po.payable||0),0));
+ const legacyPaid=r2(pos.reduce((a,po)=>a+(po.payments||[]).reduce((s,p)=>s+p.amt,0),0));
+ const supPaid=r2(supPaymentsFor(supplierId).reduce((a,p)=>a+p.amt,0));
+ return r2(payable-legacyPaid-supPaid)}
+function oldestUnpaidBillDate(supplierId){const pos=L('po').filter(po=>po.supplier==supplierId&&poOutstanding(po)>0);
+ const dates=pos.map(po=>po.billDate||po.created.slice(0,10)).sort();return dates[0]||null}
+const PAY_MODES={cash:'Cash',upi:'UPI',cheque:'Cheque',bank:'Bank transfer',other:'Other'};
+function recordSupplierPayment(s){const outstanding=supplierOutstanding(s.id);
+ const amt=h('input',{type:'number',placeholder:'Amount paid',value:outstanding>0?outstanding:''}),date=h('input',{type:'date',value:new Date().toLocaleDateString('en-CA')});
+ const mode=h('select',{},...Object.entries(PAY_MODES).map(([k,v])=>h('option',{value:k},v)));
+ const utr=h('input',{placeholder:'UPI UTR number'}),chequeNo=h('input',{placeholder:'Cheque number'}),chequeDate=h('input',{type:'date'}),bankRef=h('input',{placeholder:'Bank transaction reference'}),note=h('input',{placeholder:'Note (optional)'});
+ const refWrap=h('div');
+ const refreshRef=()=>refWrap.replaceChildren(
+  mode.value=='upi'?h('div',{class:'row'},utr):null,
+  mode.value=='cheque'?h('div',{class:'row'},chequeNo,h('label',{},'Cheque date',chequeDate)):null,
+  mode.value=='bank'?h('div',{class:'row'},bankRef):null);
+ mode.onchange=refreshRef;refreshRef();
+ const x=modal(h('h3',{},'Record payment — '+esc(s.name)),
+  h('div',{},'Outstanding balance: '+inr(outstanding)),
+  h('div',{class:'row'},amt,date),h('div',{class:'row'},'Mode',mode),refWrap,note,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const a=+amt.value;if(!(a>0))return alert('Enter a valid amount');
+   if(mode.value=='upi'&&!utr.value.trim())return alert('Enter the UPI UTR number');
+   if(mode.value=='cheque'&&!chequeNo.value.trim())return alert('Enter the cheque number');
+   const p={supplier:s.id,amt:a,at:new Date((date.value||new Date().toLocaleDateString('en-CA'))+'T12:00:00').toISOString(),mode:mode.value,
+    utr:mode.value=='upi'?utr.value.trim():'',chequeNo:mode.value=='cheque'?chequeNo.value.trim():'',chequeDate:mode.value=='cheque'?chequeDate.value:'',bankRef:mode.value=='bank'?bankRef.value.trim():'',
+    note:note.value.trim(),by:S.user.id};
+   await save('suppayment',p);await audit('supplier_payment',s.name+' '+inr(a)+' via '+PAY_MODES[mode.value]);x();render()}},'Save payment'),h('button',{onclick:()=>x()},'Cancel')))}
 /* Purchase returns (Part 3 #4): a "Return to supplier" action on a received PO line. Accounting choice
    (judgment call, documented): rather than a separate negative-adjustment record, we reduce the line's
    `received` count directly and recompute `payable` from it (payable is already defined as
@@ -502,25 +615,34 @@ async function returnToSupplier(po,i){const l=po.lines[i];const max=l.received||
  l.received=max-q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':(po.lines.some(x=>x.received)?'partial':'ordered');
  po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);await audit('purchase_return',po.no+' '+l.name+' x'+q);render()}
 function supplierLedgerModal(s){const pos=L('po').filter(po=>po.supplier==s.id).sort((a,b)=>b.created>a.created?1:-1);
- const totalPayable=r2(pos.reduce((a,po)=>a+(po.payable||0),0)),totalPaid=r2(pos.reduce((a,po)=>a+(po.payments||[]).reduce((s2,p)=>s2+p.amt,0),0));
+ const totalPayable=r2(pos.reduce((a,po)=>a+(po.payable||0),0));
+ const outstanding=supplierOutstanding(s.id);
+ const oldest=oldestUnpaidBillDate(s.id);
+ const daysElapsed=oldest?Math.floor((Date.now()-new Date(oldest))/86400000):null;
+ const overdue=outstanding>0&&s.creditDays!=null&&daysElapsed!=null&&daysElapsed>s.creditDays;
+ const pays=supPaymentsFor(s.id);
+ const payRefText=p=>p.mode=='upi'?('UTR '+p.utr):p.mode=='cheque'?('Cheque #'+p.chequeNo+(p.chequeDate?' dt. '+p.chequeDate:'')):p.mode=='bank'?('Ref '+p.bankRef):'';
  const x=modal(h('h3',{},'Statement of account — '+esc(s.name)),
-  h('div',{},'Total payable: '+inr(totalPayable)+' · Total paid: '+inr(totalPaid)+' · Outstanding: '+inr(r2(totalPayable-totalPaid))),
-  h('h4',{},'Purchase orders / goods received ('+pos.length+')'),
-  ...pos.map(po=>h('div',{class:'card',style:'margin:6px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),new Date(po.created).toLocaleDateString(),inr(po.payable||0)),
+  h('div',{},'Total payable: '+inr(totalPayable)+' · Outstanding: '+inr(outstanding)),
+  outstanding>0&&oldest?h('div',{class:overdue?'low':''},'Oldest unpaid bill: '+oldest+' ('+daysElapsed+' day(s) ago)'+(s.creditDays!=null?' · Credit period '+s.creditDays+' day(s)'+(overdue?' — OVERDUE':''):'')):null,
+  h('div',{class:'row'},h('h4',{},'Payments ('+pays.length+')'),outstanding>0?h('button',{class:'p sm',onclick:()=>{x();recordSupplierPayment(s)}},'Record payment'):null),
+  ...pays.map(p=>h('div',{class:'row'},new Date(p.at).toLocaleDateString()+' · '+PAY_MODES[p.mode]+(payRefText(p)?' · '+payRefText(p):'')+(p.note?' · '+esc(p.note):''),'-'+inr(p.amt))),
+  !pays.length?h('p',{class:'hint'},'No payments recorded yet.'):null,
+  h('h4',{},'Purchase bills / goods received ('+pos.length+')'),
+  ...pos.map(po=>h('div',{class:'card',style:'margin:6px 0'},h('div',{class:'row'},h('b',{},po.billNo?('Bill '+po.billNo):po.no),h('span',{class:'tag'},po.status),(po.billDate||new Date(po.created).toLocaleDateString()),inr(po.payable||0)),
    ...po.lines.map(l=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),inr((l.received||0)*l.cost))),
-   ...(po.payments||[]).map(p=>h('div',{class:'row'},'Payment '+new Date(p.at).toLocaleDateString(),'-'+inr(p.amt))))),
-  !pos.length?h('p',{},'No purchase orders for this supplier yet.'):null,
+   ...(po.payments||[]).map(p=>h('div',{class:'row'},'Payment (legacy, per-bill) '+new Date(p.at).toLocaleDateString(),'-'+inr(p.amt))))),
+  !pos.length?h('p',{},'No purchase bills for this supplier yet.'):null,
   h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 V.po=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const pos=L('po').sort((a,b)=>b.created>a.created?1:-1);
- const bySup={};pos.forEach(po=>{const k=po.supplier||'—';bySup[k]=r2((bySup[k]||0)+poOutstanding(po))});
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Suppliers'),h('button',{class:'p sm',onclick:()=>supForm({})},'Add supplier')),
-   ...L('supplier').map(s=>h('div',{class:'row'},h('button',{class:'sm',onclick:()=>supplierLedgerModal(s)},s.name+' · '+(s.phone||'')),h('span',{},bySup[s.id]?h('b',{class:bySup[s.id]>0?'low':''},'Outstanding '+inr(bySup[s.id])):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit'))))),
-  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Purchase orders'),h('button',{class:'p sm',onclick:poForm},'New PO')),
-   ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier)),po.payable?h('span',{},'Payable '+inr(po.payable)+' · Outstanding '+inr(poOutstanding(po))):null),
+   ...L('supplier').map(s=>{const out=supplierOutstanding(s.id);return h('div',{class:'row'},h('button',{class:'sm',onclick:()=>supplierLedgerModal(s)},s.name+' · '+(s.phone||'')),h('span',{},out?h('b',{class:out>0?'low':''},'Outstanding '+inr(out)):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit')))})),
+  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Purchase bills'),h('button',{class:'p sm',onclick:poForm},'New bill')),
+   ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.billNo?('Bill '+po.billNo):po.no),h('span',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier)),h('span',{},po.billDate||''),po.payable?h('span',{},'Payable '+inr(po.payable)+' · Outstanding '+inr(poOutstanding(po))):null),
     ...po.lines.map((l,i)=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),
      h('span',{},po.status!='received'?null:null,po.status!='received'?h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:32px;padding:4px'}):null,po.status!='received'?h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive'):null,
       (l.received||0)>0?h('button',{class:'sm',onclick:()=>returnToSupplier(po,i)},'Return to supplier'):null))),
-    poOutstanding(po)>0?h('div',{class:'row'},h('button',{class:'sm',onclick:()=>recordPoPayment(po)},'Record supplier payment')):null))))};
+    poOutstanding(po)>0?h('div',{class:'row'},h('span',{class:'hint'},'Legacy per-bill payment:'),h('button',{class:'sm',onclick:()=>recordPoPayment(po)},'Record payment on this bill')):null))))};
 /* stock adjustments: manager/owner records damaged/lost/found stock with a reason, separate from a
    sale or purchase -- both adjusts the item's stock and appends a 'stockmove' ledger entry */
 function stockAdjItems(){return[...L('book').map(b=>({dept:'book',id:b.id,name:b.title})),...L('cafeitem').filter(i=>i.track).map(i=>({dept:'cafe',id:i.id,name:i.name})),...L('stationery').map(i=>({dept:'stat',id:i.id,name:i.name}))]}
@@ -648,18 +770,18 @@ function importModal(dept){const inp=h('input',{type:'file',accept:'.csv'});cons
 function bookForm(b){const f={title:h('input',{value:b.title||'',placeholder:'Title'}),author:h('input',{value:b.author||'',placeholder:'Author'}),publisher:h('input',{value:b.publisher||'',placeholder:'Publisher'}),isbn:h('input',{value:b.isbn||'',placeholder:'ISBN / barcode'}),
   cat:h('select',{},...L('cat').filter(c=>c.dept=='book').map(c=>h('option',{value:c.id,selected:c.id==b.cat},c.name))),
   supplier:h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==b.supplier},s.name))),
-  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),mrp:h('input',{type:'number',value:b.mrp??'',placeholder:'MRP (printed price, optional)'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'}),
+  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),mrp:h('input',{type:'number',value:b.mrp??'',placeholder:'MRP (printed price, optional)'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'}),unit:h('input',{value:b.unit||'pcs',placeholder:'Unit (e.g. pcs)'}),
   edition:h('input',{value:b.edition||'',placeholder:'Edition (optional)'}),language:h('input',{value:b.language||'',placeholder:'Language (optional)'}),subcat:h('input',{value:b.subcat||'',placeholder:'Subcategory (free text, optional)'}),rack:h('input',{value:b.rack||'',placeholder:'Rack / shelf location (optional)'}),coverUrl:h('input',{value:b.coverUrl||'',placeholder:'Cover image URL (optional)'}),
   rentable:h('input',{type:'checkbox',checked:b.rentable!==false}),
   status:h('select',{},...['active','inactive'].map(s=>h('option',{value:s,selected:(b.status||'active')==s},s)))};
  const genBtn=h('button',{class:'sm',onclick:()=>{f.isbn.value=genCode('BK')}},'Generate barcode');
- const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.mrp,f.price,f.stock,f.reorder,f.hsn,
+ const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.mrp,f.price,f.unit,f.stock,f.reorder,f.hsn,
   h('div',{class:'row'},f.edition,f.language),f.subcat,f.rack,f.coverUrl,
   h('div',{class:'row'},h('label',{},f.rentable,' Rentable (appears in Rent-a-book)'),h('label',{},'Status',f.status)),
   h('p',{class:'hint'},'Books are GST-exempt (0%) by law. Inactive books stay in Inventory for records but are hidden from Sell and Rent-a-book.'),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.title.value||!f.cat.value||!(+f.price.value>0))return alert('Title, category and sell price are needed.');
    if(b.id&&(b.stock!=+f.stock.value||b.price!=+f.price.value))await audit('edit_book',b.title+' stock '+(b.stock??0)+'->'+f.stock.value+' price '+(b.price??0)+'->'+f.price.value);
-   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,mrp:f.mrp.value===''?null:+f.mrp.value,price:+f.price.value,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim(),
+   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,mrp:f.mrp.value===''?null:+f.mrp.value,price:+f.price.value,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim(),
     edition:f.edition.value.trim(),language:f.language.value.trim(),subcat:f.subcat.value.trim(),rack:f.rack.value.trim(),coverUrl:f.coverUrl.value.trim(),rentable:f.rentable.checked,status:f.status.value},b.id);x();render()}},'Save'),
    h('button',{onclick:()=>{if(!f.isbn.value)return alert('Enter or generate a barcode first');printBarcode(f.isbn.value,f.title.value)}},'Print barcode'),
    b.id?h('button',{onclick:async()=>{await save('book',b,b.id,true);x();render()}},'Delete'):null))}
@@ -668,14 +790,15 @@ function stockForm(dept,it){const kind=DEPT_KIND[dept];
   price:h('input',{type:'number',value:it.price??'',placeholder:'Price'}),cost:h('input',{type:'number',value:it.cost??'',placeholder:'Cost price (optional, for margin reports)'}),gst:h('input',{type:'number',value:it.gst??DM[dept].gst,placeholder:'GST %'}),
   track:dept=='cafe'?h('input',{type:'checkbox',checked:it.track}):null,sku:dept=='stat'?h('input',{value:it.sku||'',placeholder:'SKU / barcode'}):null,
   supplier:dept=='stat'?h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==it.supplier},s.name))):null,
+  mrp:dept=='stat'?h('input',{type:'number',value:it.mrp??'',placeholder:'MRP (printed price, optional)'}):null,unit:h('input',{value:it.unit||'pcs',placeholder:'Unit (e.g. pcs)'}),
   stock:h('input',{type:'number',value:it.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:it.reorder??5,placeholder:'Reorder threshold'}),hsn:h('input',{value:it.hsn||'',placeholder:'HSN code (optional)'})};
  const genBtn=dept=='stat'?h('button',{class:'sm',onclick:()=>{f.sku.value=genCode('ST')}},'Generate barcode'):null;
  const x=modal(h('h3',{},it.id?'Edit '+DM[dept].label+' item':'New '+DM[dept].label+' item'),
-  f.name,f.cat,f.price,f.cost,f.gst,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,dept=='stat'?f.supplier:null,f.stock,f.reorder,f.hsn,
+  f.name,f.cat,f.price,f.cost,f.gst,dept=='stat'?f.mrp:null,f.unit,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,dept=='stat'?f.supplier:null,f.stock,f.reorder,f.hsn,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value||!f.cat.value||!(+f.price.value>0))return alert('Name, category and price are needed.');
    if(it.id&&(it.stock!=+f.stock.value||it.price!=+f.price.value))await audit('edit_'+kind,f.name.value+' stock '+(it.stock??0)+'->'+f.stock.value+' price '+(it.price??0)+'->'+f.price.value);
-   const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,hsn:f.hsn.value.trim()};
-   if(dept=='stat'){data.sku=f.sku.value.trim();data.supplier=f.supplier.value||null}
+   const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,hsn:f.hsn.value.trim()};
+   if(dept=='stat'){data.sku=f.sku.value.trim();data.supplier=f.supplier.value||null;data.mrp=f.mrp.value===''?null:+f.mrp.value}
    await save(kind,data,it.id);x();render()}},'Save'),
    dept=='stat'?h('button',{onclick:()=>{if(!f.sku.value)return alert('Enter or generate a barcode first');printBarcode(f.sku.value,f.name.value)}},'Print barcode'):null,
    it.id?h('button',{onclick:async()=>{await save(kind,it,it.id,true);x();render()}},'Delete'):null))}
@@ -703,7 +826,7 @@ V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l
   h('h4',{},'GSTIN verification (optional)'),h('p',{class:'hint'},'GSTIN state-derivation and checksum validation works with no setup. Business name/address auto-fetch needs a paid third-party GSTIN-verification API (Surepass/Appyflow/ClearTax etc) — this app does not include one. Add your own key+endpoint here to enable it; leave blank to keep using format-derived data only.'),
   f('gstinApiUrl','Verification API endpoint (GSTIN appended to the end)'),f('gstinApiKey','Verification API key'),
   h('button',{class:'p',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save')),
- h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')),
+ h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase bills.'),h('p',{},'Manager: discounts, voids, returns, purchase bills.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')),
  h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
   h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
    ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),

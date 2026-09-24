@@ -18,8 +18,11 @@ create policy r_read on records for select using(me() is not null);
 -- the catalog itself (title, price, ...) to owner (stock-adjust screens allow manager). This is a
 -- deliberate simplification matching the reference design's "kind in (...)" pattern; a stricter
 -- deployment could replace this with a security-definer RPC that only touches the stock field.
--- supplier/po: any signed-in staff at the DB level too, for the same simplification reason -- the
--- app UI restricts the Purchase Orders screen to manager/owner.
+-- supplier/po/suppayment: any signed-in staff at the DB level too, for the same simplification reason
+-- -- the app UI restricts the Purchase (bills) screen to manager/owner. suppayment is a supplier-level
+-- payment record (Busy Accounting-style restructuring): payments are tracked against the supplier's
+-- running balance rather than one specific bill, since that matches how a shop actually pays down
+-- credit with a supplier -- see recordSupplierPayment/supplierOutstanding in index.html.
 -- shift: any signed-in staff -- cashiers and managers both open/close the drawer and log counts.
 -- torder: any signed-in staff -- the Table Orders queue is confirmed/rejected by cashier+.
 -- customer: any signed-in staff -- loyalty points/credit must update at checkout time for any
@@ -33,8 +36,8 @@ create policy r_read on records for select using(me() is not null);
 -- after the fact in the app UI, so allowing UPDATE at the DB level costs nothing in practice, but we
 -- still include them for symmetry with the existing "kind in (...)" pattern rather than inventing a
 -- separate append-only policy shape.
-create policy r_ins on records for insert with check(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner'));
-create policy r_upd on records for update using(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner')) with check(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner'));
+create policy r_ins on records for insert with check(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','suppayment','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner'));
+create policy r_upd on records for update using(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','suppayment','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner')) with check(me() is not null and (kind in('order','exp','book','cafeitem','stationery','supplier','po','suppayment','shift','torder','customer','rental','membership','checkin','stockmove','audit') or me()='owner'));
 alter publication supabase_realtime add table records;
 -- Promote a user:  update profiles set role='manager' where email='someone@example.com';
 
