@@ -245,7 +245,7 @@ async function doReturn(order,line,max){const v=prompt('Quantity to return (max 
  const amt=r2(line.price*qn*(1-(line.disc||0)/100));const ro={id:uid(),no:nextNo(),type:'return',refNo:order.no,lines:[{dept:line.dept,id:line.id,name:line.name,price:line.price,gst:line.gst||0,qty:-qn,disc:line.disc||0}],status:'paid',created:now(),by:S.user.id,cust:order.cust||{},paidAt:now(),pays:[{m:method,amt:-amt}]};
  ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);await audit('return',ro.no+' ref '+order.no+' qty '+qn+' amt '+amt);prn(rcpt(ro));render()}
 /* table orders (from QR self-order) */
-function loadTorder(o){if(!S.cur)S.cur=newOrder();o.lines.forEach(l=>addLine('cafe',l.id,l.name,l.price,0));save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='pos';render()})}
+function loadTorder(o){if(!S.cur)S.cur=newOrder();o.lines.forEach(l=>{const it=rec(l.id);for(let i=0;i<(l.qty||1);i++)addLine('cafe',l.id,l.name,l.price,it?it.gst||0:0)});save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='pos';render()})}
 function rejectTorder(o){save('torder',{...o,status:'rejected'},o.id).then(render)}
 /* views */
 V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=tot(o);const matchQ=(...f)=>f.some(x=>(x||'').toLowerCase().includes(q));
