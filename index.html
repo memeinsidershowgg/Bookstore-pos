@@ -121,6 +121,7 @@ const ICONS={
  staff:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20 C5.4 15 8 13 12 13 C16 13 18.6 15 19 20"/>',
  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3.4 V6.1 M12 17.9 V20.6 M3.4 12 H6.1 M17.9 12 H20.6 M6.1 6.1 L7.9 7.9 M16.1 16.1 L17.9 17.9 M17.9 6.1 L16.1 7.9 M7.9 16.1 L6.1 17.9"/>',
  more:'<circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="12" cy="18" r="1.4"/><circle cx="18" cy="18" r="1.4"/>',
+ dash:'<rect x="3.3" y="3.3" width="7.4" height="7.4" rx="1.3"/><rect x="13.3" y="3.3" width="7.4" height="7.4" rx="1.3"/><rect x="3.3" y="13.3" width="7.4" height="7.4" rx="1.3"/><rect x="13.3" y="13.3" width="7.4" height="7.4" rx="1.3"/>',
  search:'<circle cx="10.4" cy="10.4" r="6"/><path d="M15 15 L20 20"/>',
  scan:'<path d="M4 8.3 V5 H8.3"/><path d="M15.7 5 H20 V8.3"/><path d="M20 15.7 V19 H15.7"/><path d="M8.3 19 H4 V15.7"/><path d="M6.8 12 H17.2"/>',
  plus:'<path d="M12 5 V19 M5 12 H19"/>',
@@ -134,8 +135,27 @@ const ICONS={
 };
 const icon=(name,size)=>{const s=h('span',{class:'ico'});s.style.width=s.style.height=(size||20)+'px';s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||ICONS.more}</svg>`;return s};
 const L=k=>Object.values(R).filter(r=>r.kind==k&&!r.deleted).map(r=>r.data),rec=id=>R[id]&&!R[id].deleted?R[id].data:null;
-const cfg=()=>({name:'My Bookstore & Cafe',addr:'',phone:'',taxid:'',tax:5,ptsPer:100,prefix:'INV',cur:'₹',...(R.settings&&R.settings.data)}),can=x=>S.role=='owner'||(x=='m'&&S.role=='manager');
+const cfg=()=>({name:'My Bookstore & Cafe',addr:'',phone:'',taxid:'',tax:5,ptsPer:100,prefix:'INV',cur:'₹',homeState:'',gstinApiKey:'',gstinApiUrl:'',...(R.settings&&R.settings.data)}),can=x=>S.role=='owner'||(x=='m'&&S.role=='manager');
 const DM={book:{label:'Books',gst:0},cafe:{label:'Cafe',gst:5},stat:{label:'Stationery',gst:18}};
+/* GSTIN: standard 2024 Indian state/UT code table (first 2 digits of a GSTIN). Used purely client-side
+   to derive the party's state (for the CGST/SGST-vs-IGST call) and to validate the checksum -- there is
+   no free unauthenticated live-registry lookup, so this is explicitly "derived from GSTIN format", not
+   a live fetch. See gstinLookup() below for the optional, Settings-configured live-lookup path. */
+const GST_STATE_CODES={'01':'Jammu and Kashmir','02':'Himachal Pradesh','03':'Punjab','04':'Chandigarh','05':'Uttarakhand','06':'Haryana','07':'Delhi','08':'Rajasthan','09':'Uttar Pradesh','10':'Bihar','11':'Sikkim','12':'Arunachal Pradesh','13':'Nagaland','14':'Manipur','15':'Mizoram','16':'Tripura','17':'Meghalaya','18':'Assam','19':'West Bengal','20':'Jharkhand','21':'Odisha','22':'Chhattisgarh','23':'Madhya Pradesh','24':'Gujarat','26':'Dadra and Nagar Haveli and Daman and Diu','27':'Maharashtra','29':'Karnataka','30':'Goa','31':'Lakshadweep','32':'Kerala','33':'Tamil Nadu','34':'Puducherry','35':'Andaman and Nicobar Islands','36':'Telangana','37':'Andhra Pradesh','38':'Ladakh','97':'Other Territory','99':'Centre Jurisdiction'};
+function gstinDecode(gstin){gstin=(gstin||'').trim().toUpperCase();
+ const fmtOk=/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin);
+ const stateCode=gstin.slice(0,2),stateName=GST_STATE_CODES[stateCode]||'';const pan=gstin.slice(2,12);
+ let checksumOk=null;
+ if(fmtOk){const alnum='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';let f=0;
+  for(let i=0;i<14;i++){const v=alnum.indexOf(gstin[i]);let p=v*((i%2)+1);p=Math.floor(p/36)+(p%36);f+=p}
+  const chk=alnum[f%36];checksumOk=chk===gstin[14]}
+ return{gstin,valid:fmtOk&&checksumOk,fmtOk,checksumOk,stateCode,stateName,pan}}
+/* Optional live business-name/address lookup: only runs if a GSTIN-verification API key+endpoint is
+   configured in Settings (no free public one exists -- Surepass/Appyflow/ClearTax etc all need a paid
+   key this app doesn't have). Without one configured this returns null and the caller shows a note
+   instead of pretending to fetch data. */
+async function gstinLookup(gstin){const s=cfg();if(!s.gstinApiUrl||!s.gstinApiKey)return null;
+ try{const r=await fetch(s.gstinApiUrl+encodeURIComponent(gstin),{headers:{Authorization:'Bearer '+s.gstinApiKey}});if(!r.ok)return null;return await r.json()}catch{return null}}
 const DEPT_KIND={book:'book',cafe:'cafeitem',stat:'stationery'};
 const DENOMS=[{v:2000,rare:true},{v:500},{v:200},{v:100},{v:50},{v:20},{v:10},{v:5},{v:2},{v:1}];
 const normPhone=p=>(p||'').replace(/\D/g,'');
@@ -158,7 +178,12 @@ function stockLedger(dept,itemId){return L('stockmove').filter(m=>m.dept==dept&&
 async function audit(action,detail){await save('audit',{action,detail:detail||'',by:(S.user&&S.user.id)||'',at:now()})}
 /* CRM auto-collect: every customer-linked transaction (sale, rental, membership check-in) bumps
    visits/lastVisit on that phone's customer record automatically, no extra staff action needed */
-async function touchCustomer(phone,name){if(!phone)return;const c=rec(phone)||{id:phone,name:name||'',phone,points:0,credit:0,visits:0};c.visits=(c.visits||0)+1;c.lastVisit=now();if(name)c.name=name;await save('customer',c,phone);return c}
+async function touchCustomer(phone,name){if(!phone)return;const c=rec(phone)||{id:phone,name:name||'',phone,points:0,credit:0,visits:0};c.visits=(c.visits||0)+1;c.lastVisit=now();if(!c.since)c.since=now();if(name)c.name=name;await save('customer',c,phone);return c}
+/* "Customer since" (Part 3 #5): stored explicitly on the first touchCustomer() call above rather than
+   derived by scanning history each render -- cheaper to read, and correct even if old orders are ever
+   purged, at the one-time cost of not being able to backfill it for customers that already existed
+   before this field was added (those just show "—" until their next visit sets it). */
+function custLifetimeSpend(phone){return r2(L('order').filter(o=>o.status=='paid'&&o.type!='return'&&normPhone((o.cust||{}).phone)==phone).reduce((a,o)=>a+o.t.total,0))}
 /* local store: rec = every record, out = unsent changes (keyed by id, latest wins, never dropped) */
 const idb=new Promise(r=>{const q=indexedDB.open('bpos1',1);q.onupgradeneeded=()=>['rec','out','meta'].forEach(s=>q.result.createObjectStore(s,{keyPath:s=='meta'?'k':'id'}));q.onsuccess=()=>r(q.result)});
 const tx=async(s,m,f)=>{const d=await idb;return new Promise((res,rej)=>{const t=d.transaction(s,m),q=f(t.objectStore(s));t.oncomplete=()=>res(q.result);t.onerror=()=>rej(t.error)})};
@@ -170,26 +195,38 @@ async function sync(){if(busy||!navigator.onLine||!S.user)return;busy=1;try{cons
  const since=((await get('meta','since'))||{}).v||'1970-01-01T00:00:00Z',{data,error}=await sb.from('records').select('id,kind,data,deleted,updated_at').gte('updated_at',since).order('updated_at').limit(1000);if(error)throw error;let ch=0;
  for(const r of data){if(await get('out',r.id)||(R[r.id]&&R[r.id].updated_at==r.updated_at))continue;R[r.id]=r;await put('rec',r);ch++}
  if(data.length)await put('meta',{k:'since',v:data[data.length-1].updated_at});if(ch&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))render();if(data.length>=1000)setTimeout(sync,500)}catch(e){console.warn('sync',e)}busy=0;setNote()}
-/* money: per-line GST (books 0%, cafe/stationery each carry their own gst%) */
+/* money: per-line GST (books 0%, cafe/stationery each carry their own gst%).
+   CGST/SGST/IGST split (Part 3 #2): a bookstore till mostly sells to local walk-in customers, so the
+   practical default is intra-state (CGST+SGST, half the combined rate each) -- IGST only applies to the
+   rare inter-state sale, flagged per-order via o.interState (auto-set true when billing a B2B party whose
+   state differs from the business's home state in Settings, and otherwise editable per-order in the cart
+   for a manual override). Combined `tax`/`byRate` are kept as-is for existing callers; cgst/sgst/igst are
+   the same totals split for display on the receipt/invoice/reports. */
 function tot(o){const lineNets=o.lines.map(l=>r2(l.price*l.qty*(1-(l.disc||0)/100)));const sub=r2(lineNets.reduce((a,b)=>a+b,0));
  const d=o.disc?r2(Math.min(sub,o.disc.t=='%'?sub*o.disc.v/100:o.disc.v)):0;const ratio=sub?(sub-d)/sub:1;
  let tax=0;const byRate={};o.lines.forEach((l,i)=>{const net=lineNets[i]*ratio,g=l.gst||0,t=r2(net*g/100);tax=r2(tax+t);byRate[g]=r2((byRate[g]||0)+t)});
- const total=r2(sub-d+tax);return{sub,d,tax,total,byRate}}
+ const total=r2(sub-d+tax);const inter=!!o.interState;
+ const igst=inter?tax:0,cgst=inter?0:r2(tax/2),sgst=inter?0:r2(tax-cgst);
+ return{sub,d,tax,total,byRate,cgst,sgst,igst,interState:inter}}
 function nextNo(){const n=(+localStorage.n||0)+1;localStorage.n=n;const dv=localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2,4).toUpperCase());return cfg().prefix+'-'+dv+'-'+String(n).padStart(4,'0')}
 const newOrder=()=>({id:uid(),lines:[],status:'cart',type:'sale',created:now(),by:S.user.id,cust:{}});
 async function persist(){const o=S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await save('order',o,o.id)}
 /* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels, via an offscreen print-iframe */
 function prn(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
 function prnA4(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
-function rcpt(o){const s=cfg(),t=o.t;return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}${s.taxid?'<br>Tax ID '+esc(s.taxid):''}<hr>${o.no}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''} · ${new Date(o.paidAt||o.created).toLocaleString()}<br>${esc((o.cust||{}).name)} ${esc((o.cust||{}).phone)}<hr><table width=100%>${o.lines.map(l=>`<tr><td>${l.qty}x ${esc(l.name)}<br><small>${(DM[l.dept]||{}).label||l.dept}${l.gst?' · GST '+l.gst+'%':''}</small></td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}</table><hr>Subtotal ${t.sub}<br>${t.d?'Discount -'+t.d+'<br>':''}${Object.entries(t.byRate||{}).map(([rt,a])=>a?'GST '+rt+'%: '+a+'<br>':'').join('')}<b>Total ${t.total}</b><br>${o.type=='return'?'Refunded '+(o.pays||[]).map(p=>p.m+' '+Math.abs(p.amt)).join(', '):'Paid '+(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
-function inv(o){const s=cfg(),t=o.t;return `<div><h2>${esc(s.name)}</h2><div>${esc(s.addr)} ${esc(s.phone)}${s.taxid?' · GSTIN '+esc(s.taxid):''}</div><hr>
-<div>Invoice <b>${o.no}</b> &nbsp; ${new Date(o.paidAt||o.created).toLocaleString()}</div>
-<div>Bill to: ${esc((o.cust||{}).name||'Walk-in')} ${esc((o.cust||{}).phone||'')}</div><br>
+function rcpt(o){const s=cfg(),t=o.t;return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}${s.taxid?'<br>Tax ID '+esc(s.taxid):''}<hr>${o.no}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''} · ${new Date(o.paidAt||o.created).toLocaleString()}<br>${esc((o.cust||{}).name)} ${esc((o.cust||{}).phone)}<hr><table width=100%>${o.lines.map(l=>`<tr><td>${l.qty}x ${esc(l.name)}<br><small>${(DM[l.dept]||{}).label||l.dept}${l.gst?' · GST '+l.gst+'%':''}</small></td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}</table><hr>Subtotal ${t.sub}<br>${t.d?'Discount -'+t.d+'<br>':''}${t.interState?(t.igst?'IGST: '+t.igst+'<br>':''):((t.cgst?'CGST: '+t.cgst+'<br>':'')+(t.sgst?'SGST: '+t.sgst+'<br>':''))}<b>Total ${t.total}</b><br>${o.type=='return'?'Refunded '+(o.pays||[]).map(p=>p.m+' '+Math.abs(p.amt)).join(', '):'Paid '+(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
+/* CA-format invoice: when billing a B2B party (o.cust.gstin set) shows the buyer's GSTIN + registered
+   name/address and the CGST/SGST/IGST breakdown a GST-compliant B2B tax invoice needs; a plain retail
+   bill (no GSTIN) keeps the simpler combined-GST-line look it always had, just with the split applied. */
+function inv(o){const s=cfg(),t=o.t,c=o.cust||{},b2b=!!c.gstin;
+ return `<div><h2>${esc(s.name)}</h2><div>${esc(s.addr)} ${esc(s.phone)}${s.taxid?' · GSTIN '+esc(s.taxid):''}</div><hr>
+<div>${b2b?'TAX INVOICE':'Invoice'} <b>${o.no}</b> &nbsp; ${new Date(o.paidAt||o.created).toLocaleString()}</div>
+<div>Bill to: ${esc(c.legalName||c.name||'Walk-in')} ${esc(c.phone||'')}${b2b?`<br>GSTIN: ${esc(c.gstin)}${c.state?' · State: '+esc(c.state):''}<br>${esc(c.address||'')}`:''}</div><br>
 <table><tr><th>Item</th><th>Dept</th><th>Qty</th><th>Rate</th><th>Disc%</th><th>GST%</th><th>Amount</th></tr>
 ${o.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${(DM[l.dept]||{}).label||l.dept}</td><td>${l.qty}</td><td>${r2(l.price)}</td><td>${l.disc||0}</td><td>${l.gst||0}</td><td>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}
 </table><br>
 <table style="max-width:320px;margin-left:auto"><tr><td>Subtotal</td><td>${t.sub}</td></tr>${t.d?`<tr><td>Discount</td><td>-${t.d}</td></tr>`:''}
-${Object.entries(t.byRate||{}).map(([rt,a])=>`<tr><td>GST ${rt}%</td><td>${a}</td></tr>`).join('')}
+${t.interState?`<tr><td>IGST</td><td>${t.igst}</td></tr>`:`<tr><td>CGST</td><td>${t.cgst}</td></tr><tr><td>SGST</td><td>${t.sgst}</td></tr>`}
 <tr><td><b>Total</b></td><td><b>${t.total}</b></td></tr></table>
 <br><div>Paid: ${(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')||'-'}</div><div>Thank you for your business!</div></div>`}
 function wa(o){let p=((o.cust||{}).phone||prompt('Customer phone')||'').replace(/\D/g,'');if(!p)return;if(p.length==10)p='91'+p;
@@ -231,27 +268,57 @@ async function applyLoyalty(o,cust,phone,redeemPts){if(!phone)return;const c=cus
  await save('customer',c,phone)}
 function waMsg(phone,text){if(!phone)return;let p=phone.replace(/\D/g,'');if(p.length==10)p='91'+p;open('https://wa.me/'+p+'?text='+encodeURIComponent(text),'_blank')}
 function custModal(o){const phone=normPhone((o.cust&&o.cust.phone)||o.phone||'');if(!phone)return alert('Enter a phone number first');let c=rec(phone)||{id:phone,name:(o.cust&&o.cust.name)||'',phone,points:0,credit:0,visits:0};
- const hist=L('order').filter(x=>x.status=='paid'&&normPhone((x.cust||{}).phone)==phone).sort((a,b)=>b.paidAt>a.paidAt?1:-1).slice(0,15);
+ const allHist=L('order').filter(x=>x.status=='paid'&&x.type!='return'&&normPhone((x.cust||{}).phone)==phone).sort((a,b)=>b.paidAt>a.paidAt?1:-1);
+ const hist=allHist.slice(0,15),lifetime=custLifetimeSpend(phone);
  const mem=L('membership').filter(m=>normPhone(m.phone)==phone).sort((a,b)=>b.purchasedAt>a.purchasedAt?1:-1)[0];
- const openRentals=L('rental').filter(r=>normPhone((r.cust||{}).phone)==phone&&r.status=='open');
+ const allRentals=L('rental').filter(r=>normPhone((r.cust||{}).phone)==phone).sort((a,b)=>b.rentedAt>a.rentedAt?1:-1);
  const adjAmt=h('input',{type:'number',placeholder:'Amount'}),adjNote=h('input',{placeholder:'Reason (e.g. return credit)'});
  const msgText=h('textarea',{rows:3,style:'width:100%',placeholder:'Offer / promo message'},'Hi '+(c.name||'')+'! We have a special offer for you at '+cfg().name+'. ');
+ /* B2B party fields (Part 4): email/birthday are ordinary CRM fields for any customer; gstin/legalName/
+    address/state/b2b are only meaningful once "B2B account" is ticked -- a real registered-business
+    party billed with a proper CA-format tax invoice, vs. an ordinary walk-in retail customer. */
+ const email=h('input',{value:c.email||'',placeholder:'Email'}),bday=h('input',{type:'date',value:c.birthday||'',placeholder:'Birthday'});
+ const b2b=h('input',{type:'checkbox',checked:!!c.b2b});
+ const gstin=h('input',{value:c.gstin||'',placeholder:'GSTIN'}),legalName=h('input',{value:c.legalName||'',placeholder:'Legal / trade name'}),address=h('input',{value:c.address||'',placeholder:'Registered address'}),state=h('input',{value:c.state||'',placeholder:'State (auto-filled from GSTIN)'});
+ const gstNote=h('p',{class:'hint'},'');
+ const fetchBtn=h('button',{class:'sm',onclick:async()=>{const d=gstinDecode(gstin.value);
+  if(!d.fmtOk){gstNote.textContent='That does not look like a valid GSTIN format.';return}
+  state.value=d.stateName||d.stateCode;
+  gstNote.textContent=(d.checksumOk?'Format + checksum valid. ':'Format valid but checksum looks off -- please re-check. ')+'State "'+ (d.stateName||d.stateCode) +'" derived from GSTIN format.';
+  const live=await gstinLookup(gstin.value);
+  if(live){legalName.value=live.legalName||live.tradeName||legalName.value;address.value=live.address||address.value;gstNote.textContent+=' Name/address fetched from the configured verification API.'}
+  else if(!cfg().gstinApiKey)gstNote.textContent+=' Add a GSTIN verification API key in Settings to auto-fetch business name & address.'}},'Fetch details');
+ const b2bFields=h('div',{style:b2b.checked?'':'display:none'},h('div',{class:'row'},gstin,fetchBtn),legalName,address,state,gstNote);
+ b2b.onchange=()=>{b2bFields.style.display=b2b.checked?'':'none'};
  const x=modal(h('h3',{},esc(c.name||'Customer')+' · '+phone),h('div',{},'Points: '+(c.points||0)+' · Store credit: '+inr(c.credit||0)+' · Visits: '+(c.visits||0)+(c.lastVisit?' · Last visit '+new Date(c.lastVisit).toLocaleDateString():'')),
+  h('div',{},'Lifetime spend: '+inr(lifetime)+' · Customer since: '+(c.since?new Date(c.since).toLocaleDateString():'—')),
   mem?h('div',{},'Membership: '+(MEMBER_PLANS.find(p=>p.id==mem.plan)||{}).label+' · Used '+r2(mem.hoursUsed||0)+'/'+mem.hoursTotal+' hrs · '+(mem.status=='active'&&mem.expiresAt>now()?'Active until '+new Date(mem.expiresAt).toLocaleDateString():'Expired')):null,
-  openRentals.length?h('div',{},'Open rentals: '+openRentals.map(r=>r.bookTitle).join(', ')):null,
+  h('h4',{},'Contact'),h('div',{class:'row'},email,bday),
+  h('label',{},b2b,' B2B account (registered business, GSTIN billing)'),b2bFields,
   can('m')?h('div',{class:'row'},adjAmt,adjNote,h('button',{class:'sm',onclick:async()=>{const a=+adjAmt.value;if(!a)return;c.credit=r2((c.credit||0)+a);c.name=c.name||(o.cust&&o.cust.name)||'';await save('customer',c,phone);await audit('credit_adjust',phone+' '+(a>0?'+':'')+a+' ('+adjNote.value+')');x();render()}},'Add credit')):null,
-  h('h4',{},'Recent purchases'),...hist.map(hh=>h('div',{class:'row'},hh.no+' · '+new Date(hh.paidAt).toLocaleDateString(),inr(hh.t.total))),!hist.length?h('p',{},'No past purchases.'):null,
+  h('div',{class:'actions'},h('button',{class:'p sm',onclick:async()=>{c.email=email.value.trim();c.birthday=bday.value||null;c.b2b=b2b.checked;
+   if(b2b.checked){c.gstin=gstin.value.trim().toUpperCase();c.legalName=legalName.value.trim();c.address=address.value.trim();c.state=state.value.trim()}
+   c.name=c.name||(o.cust&&o.cust.name)||'';await save('customer',c,phone);alert('Saved');x();render()}},'Save details')),
+  h('h4',{},'Recent purchases ('+allHist.length+' total)'),...hist.map(hh=>h('div',{class:'row'},hh.no+' · '+new Date(hh.paidAt).toLocaleDateString(),inr(hh.t.total))),!hist.length?h('p',{},'No past purchases.'):null,
+  h('h4',{},'Rental history'),...allRentals.map(r=>h('div',{class:'row'},esc(r.bookTitle)+' · '+(r.status=='open'?'Open since '+new Date(r.rentedAt).toLocaleDateString():'Returned '+new Date(r.returnedAt).toLocaleDateString()),r.status=='open'?h('b',{},'Deposit '+inr(r.deposit)):h('span',{},inr(r.refund)+' refunded'))),!allRentals.length?h('p',{},'No rental history.'):null,
   h('h4',{},'Message for offers'),msgText,h('button',{class:'sm',onclick:()=>waMsg(phone,msgText.value)},'Open WhatsApp'),
   h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
-function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
+function pay(){const o=S.cur;if(!o.lines.length)return;
  let redeemPts=0,changeVals={};const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
+ if(cust&&cust.b2b)o.interState=!!(cust.state&&cfg().homeState&&cust.state!==cfg().homeState);
+ o.t=tot(o);
  const due=()=>r2(o.t.total-redeemPts-P.reduce((a,x)=>a+x.amt,0));
  const amt=h('input',{type:'number',value:o.t.total});
  const useDenom=h('input',{type:'checkbox'});
  const cdw=h('div',{style:'display:none'});
  const cashDenom=denomPicker(s=>{amt.value=s});
  useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(cashDenom.el)};
- const custRow=h('div',{class:'row'},cust?('Customer: '+esc(cust.name||phone)+' · pts '+(cust.points||0)+' · credit '+inr(cust.credit||0)):(phone?'New customer':'No phone on order'));
+ const custRow=h('div',{class:'row'},cust?('Customer: '+esc(cust.name||phone)+' · pts '+(cust.points||0)+' · credit '+inr(cust.credit||0)+(cust.b2b?' · B2B ('+(cust.gstin||'no GSTIN')+')':'')):(phone?'New customer':'No phone on order'));
+ /* Inter-state default: a B2B party whose state differs from the business's home state (Settings) is
+    inter-state -> IGST; everything else defaults to intra-state -> CGST+SGST, editable here in case
+    staff know better than the stored state (e.g. billing address differs from shipping). */
+ const interState=h('input',{type:'checkbox',checked:!!(cust&&cust.b2b&&cust.state&&cfg().homeState&&cust.state!==cfg().homeState)});
+ interState.onchange=()=>{o.interState=interState.checked;o.t=tot(o);up()};
  const redeemRow=cust&&cust.points>0?h('div',{class:'row'},h('input',{type:'number',id:'rdp',placeholder:'Redeem points (1pt=₹1)',style:'width:170px'}),h('button',{class:'sm',onclick:()=>{redeemPts=Math.max(0,Math.min(cust.points,+$('#rdp').value||0));up()}},'Apply')):null;
  const list=h('div');const info=h('b');const changeSec=h('div');
  const up=()=>{list.replaceChildren(...P.map((p,i)=>h('div',{class:'row'},p.m.toUpperCase()+' '+inr(p.amt),h('button',{class:'sm',onclick:()=>{P.splice(i,1);up()}},'x'))));
@@ -262,8 +329,11 @@ function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
   else if(m!='cash')a=Math.min(a,due());
   if(a<=0)return;P.push({m,amt:a});up()};
  const done=h('button',{class:'p cta',disabled:true,onclick:async()=>{o.pays=P;o.redeemPts=redeemPts;o.change=Math.max(-due(),0);o.changeDenoms=changeVals;o.status='paid';o.paidAt=now();
+  if(cust&&cust.b2b)o.cust={...o.cust,gstin:cust.gstin||'',legalName:cust.legalName||'',address:cust.address||'',state:cust.state||''};
   await persist();await adjustStock(o,-1);await applyLoyalty(o,cust,phone,redeemPts);x();prn(rcpt(o));S.cur=null;S.cartOpen=false;render()}},'Complete and print');
- const x=modal(h('h3',{},'Pay '+inr(o.t.total)),custRow,redeemRow,amt,h('label',{},useDenom,' Cash — count by denomination'),cdw,
+ const x=modal(h('h3',{},'Pay '+inr(o.t.total)),custRow,redeemRow,
+  cust&&cust.b2b?h('label',{},interState,' Inter-state sale (IGST instead of CGST+SGST)'):null,
+  amt,h('label',{},useDenom,' Cash — count by denomination'),cdw,
   h('div',{class:'row'},...['cash','upi','card','credit'].map(m=>h('button',{onclick:()=>addPay(m)},m.toUpperCase()))),
   list,info,changeSec,h('div',{class:'actions'},done,h('button',{onclick:()=>x()},'Cancel')));
  up()}
@@ -282,7 +352,7 @@ function rejectTorder(o){save('torder',{...o,status:'rejected'},o.id).then(rende
 /* views */
 V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=tot(o);const matchQ=(...f)=>f.some(x=>(x||'').toLowerCase().includes(q));
  const cats=L('cat').filter(c=>c.dept==S.dept).sort((a,b)=>a.n-b.n);if(!cats.some(c=>c.id==S.cat))S.cat=cats[0]&&cats[0].id;
- const itemsList=S.dept=='book'?L('book').filter(b=>q?matchQ(b.title,b.author,b.isbn):b.cat==S.cat).sort((a,b)=>a.title.localeCompare(b.title))
+ const itemsList=S.dept=='book'?L('book').filter(b=>(b.status||'active')!='inactive').filter(b=>q?matchQ(b.title,b.author,b.isbn):b.cat==S.cat).sort((a,b)=>a.title.localeCompare(b.title))
   :S.dept=='cafe'?L('cafeitem').filter(i=>q?matchQ(i.name):i.cat==S.cat).sort((a,b)=>a.name.localeCompare(b.name))
   :L('stationery').filter(i=>q?matchQ(i.name,i.sku):i.cat==S.cat).sort((a,b)=>a.name.localeCompare(b.name));
  const itemBtn=(low,oos,onclick,...content)=>h('button',{class:oos?'oos':'',disabled:oos&&!can('m'),onclick},...content,low&&!oos?h('div',{class:'tag low'},'Low stock'):null,oos?h('div',{class:'tag'},'Out of stock'):null);
@@ -292,7 +362,7 @@ V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=t
   h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search',value:S.q,oninput:e=>{S.q=e.target.value;render()}})),
   h('div',{class:'row',style:'justify-content:flex-start'},...cats.map(c=>h('button',{class:((c.id==S.cat&&!q)?'on sm':'sm')+' pill',onclick:()=>{S.cat=c.id;S.q='';render()}},c.name))),
   h('div',{class:'items'},...itemsList.map(it=>{const tracked=S.dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;const label=S.dept=='book'?it.title:it.name;
-   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(S.dept,it.id,label,it.price,it.gst||0)},h('b',{},label),S.dept=='book'&&it.author?h('small',{},it.author):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
+   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(S.dept,it.id,label,it.price,it.gst||0)},it.coverUrl?h('img',{src:it.coverUrl,style:'width:100%;height:34px;object-fit:cover;border-radius:4px'}):null,h('b',{},label),S.dept=='book'&&it.author?h('small',{},it.author):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
   itemsList.length?null:h('p',{},cats.length||q?'No items here.':'Add categories and items in Inventory.'));
  const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),o.no?h('small',{},o.no):null),
   ...o.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',h('span',{class:'tag tag-'+l.dept},(DM[l.dept]||{}).label||l.dept),l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1)},'+'),can('m')?h('button',{class:'sm',onclick:()=>lineDisc(l)},'%'):null),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
@@ -339,6 +409,17 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
  const best={};ro.forEach(o=>o.lines.forEach(l=>{const k=l.dept+'|'+l.name,net=r2(l.price*l.qty*(1-(l.disc||0)/100));(best[k]=best[k]||{qty:0,rev:0,dept:l.dept,name:l.name}).qty+=l.qty;best[k].rev=r2(best[k].rev+net)}));
  const bestArr=Object.values(best).sort((a,b)=>b.rev-a.rev).slice(0,10);
  let costTot=0,revTot=0;ro.forEach(o=>o.lines.forEach(l=>{const net=r2(l.price*l.qty*(1-(l.disc||0)/100));revTot+=net;const itm=rec(l.id);costTot+=((itm&&itm.cost)||0)*l.qty}));
+ /* Deeper reports (Part 3 #6), computed over the same range as "Range report" above. */
+ const cgstR=r2(ro.reduce((a,o)=>a+(o.t.cgst||0),0)),sgstR=r2(ro.reduce((a,o)=>a+(o.t.sgst||0),0)),igstR=r2(ro.reduce((a,o)=>a+(o.t.igst||0),0));
+ const soldItemIds=new Set();ro.forEach(o=>o.lines.forEach(l=>soldItemIds.add(l.dept+':'+l.id)));
+ const deadStock=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,stock:b.stock||0})),...L('cafeitem').filter(i=>i.track).map(i=>({dept:'cafe',id:i.id,name:i.name,stock:i.stock||0})),...L('stationery').map(i=>({dept:'stat',id:i.id,name:i.name,stock:i.stock||0}))]
+  .filter(x=>x.stock>0&&!soldItemIds.has(x.dept+':'+x.id));
+ const stockVal={book:0,cafe:0,stat:0};L('book').forEach(b=>stockVal.book+=(b.stock||0)*(b.cost||0));L('cafeitem').forEach(i=>{if(i.track)stockVal.cafe+=(i.stock||0)*(i.cost||0)});L('stationery').forEach(i=>stockVal.stat+=(i.stock||0)*(i.cost||0));
+ const catSales={};ro.forEach(o=>o.lines.forEach(l=>{const itm=rec(l.id),cn=itm?catNameOf(itm.cat):'';const k=(DM[l.dept]||{}).label+(cn?' / '+cn:'');const net=r2(l.price*l.qty*(1-(l.disc||0)/100));catSales[k]=r2((catSales[k]||0)+net)}));
+ const staffSales={};ro.forEach(o=>{const k=staffLabel(o.by);staffSales[k]=r2((staffSales[k]||0)+o.t.total)});
+ const avgBill=ro.length?r2(revTot/ro.length+r2(ro.reduce((a,o)=>a+o.t.d,0)/ro.length)):0;
+ const hsnSummary={};ro.forEach(o=>o.lines.forEach(l=>{if(!l.gst)return;const itm=rec(l.id),hsn=(itm&&itm.hsn)||'(no HSN)';const net=r2(l.price*l.qty*(1-(l.disc||0)/100)),taxAmt=r2(net*(l.gst||0)/100);
+  const e=hsnSummary[hsn]=hsnSummary[hsn]||{taxable:0,tax:0,rate:l.gst};e.taxable=r2(e.taxable+net);e.tax=r2(e.tax+taxAmt)}));
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Day report'),h('input',{type:'date',value:S.d,onchange:e=>{S.d=e.target.value;render()}})),
   R_('Bills',os.length),R_('Books sales',inr(dept.book||0)),R_('Cafe sales',inr(dept.cafe||0)),R_('Stationery sales',inr(dept.stat||0)),R_('Sales',inr(sm(o=>o.t.total))),R_('Discounts',inr(sm(o=>o.t.d))),R_('Tax collected',inr(sm(o=>o.t.tax))),
   h('h4',{},'GST breakdown'),...Object.entries(byRateDay).map(([rt,a])=>R_(rt+'% GST',inr(a))),!Object.keys(byRateDay).length?h('p',{class:'hint'},'No taxed sales today.'):null,
@@ -353,7 +434,17 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
   h('h4',{},'Daily trend'),...Object.entries(trend).sort().map(([d,v])=>h('div',{class:'row'},d,h('div',{style:'flex:1;background:#eee;border-radius:4px;overflow:hidden;height:10px;margin:0 8px'},h('div',{style:'width:'+(v/trendMax*100)+'%;background:var(--accent);height:100%'})),inr(v))),
   !Object.keys(trend).length?h('p',{class:'hint'},'No paid sales in this range.'):null,
   h('h4',{},'Best sellers'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Item'),h('th',{},'Dept'),h('th',{},'Qty'),h('th',{},'Revenue')),...bestArr.map(b=>h('tr',{},h('td',{'data-label':'Item'},b.name),h('td',{'data-label':'Dept'},(DM[b.dept]||{}).label||b.dept),h('td',{'data-label':'Qty'},b.qty),h('td',{'data-label':'Revenue'},inr(b.rev))))),
-  h('div',{class:'row'},h('button',{onclick:()=>exportLineItemsCSV(from,to)},'Export line items CSV'),h('button',{onclick:()=>exportInvoiceSummaryCSV(from,to)},'Export invoice summary CSV'))))};
+  h('div',{class:'row'},h('button',{onclick:()=>exportLineItemsCSV(from,to)},'Export line items CSV'),h('button',{onclick:()=>exportInvoiceSummaryCSV(from,to)},'Export invoice summary CSV'))),
+ h('div',{class:'card'},h('h3',{},'GST split (this range)'),R_('CGST',inr(cgstR)),R_('SGST',inr(sgstR)),R_('IGST',inr(igstR)),R_('Average bill value',inr(avgBill)),
+  h('h4',{},'HSN-wise GST summary'),h('table',{class:'rtable'},h('tr',{},h('th',{},'HSN'),h('th',{},'Rate%'),h('th',{},'Taxable value'),h('th',{},'Tax')),
+   ...Object.entries(hsnSummary).map(([hsn,e])=>h('tr',{},h('td',{'data-label':'HSN'},hsn),h('td',{'data-label':'Rate%'},e.rate),h('td',{'data-label':'Taxable value'},inr(e.taxable)),h('td',{'data-label':'Tax'},inr(e.tax))))),
+  !Object.keys(hsnSummary).length?h('p',{class:'hint'},'No taxed lines with an HSN code in this range.'):null),
+ h('div',{class:'card'},h('h3',{},'Category-wise sales'),...Object.entries(catSales).sort((a,b)=>b[1]-a[1]).map(([k,v])=>R_(k,inr(v))),!Object.keys(catSales).length?h('p',{class:'hint'},'No sales in this range.'):null),
+ h('div',{class:'card'},h('h3',{},'Staff-wise sales'),...Object.entries(staffSales).sort((a,b)=>b[1]-a[1]).map(([k,v])=>R_(k,inr(v))),!Object.keys(staffSales).length?h('p',{class:'hint'},'No sales in this range.'):null),
+ h('div',{class:'card'},h('h3',{},'Stock valuation (stock × cost, by department)'),R_('Books',inr(r2(stockVal.book))),R_('Cafe (tracked items)',inr(r2(stockVal.cafe))),R_('Stationery',inr(r2(stockVal.stat))),R_('Total',inr(r2(stockVal.book+stockVal.cafe+stockVal.stat)))),
+ h('div',{class:'card'},h('h3',{},'Dead stock (zero sales in range, stock > 0)'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Item'),h('th',{},'Dept'),h('th',{},'Stock')),
+   ...deadStock.slice(0,50).map(x=>h('tr',{},h('td',{'data-label':'Item'},x.name),h('td',{'data-label':'Dept'},(DM[x.dept]||{}).label||x.dept),h('td',{'data-label':'Stock'},x.stock)))),
+  !deadStock.length?h('p',{class:'hint'},'Nothing dead in this range.'):null))};
 /* shift / drawer cash count */
 function lastShift(){return L('shift').sort((a,b)=>b.at>a.at?1:-1)[0]}
 function shiftIsOpen(){const s=lastShift();return !!(s&&s.type=='open')}
@@ -371,9 +462,15 @@ V.shift=()=>{const open=shiftIsOpen(),last=lastShift(),hist=L('shift').sort((a,b
  h('div',{class:'card'},h('h3',{},'Shift history'),h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Type'),h('th',{},'Total'),h('th',{},'Variance')),
   ...hist.map(s=>h('tr',{},h('td',{'data-label':'When'},new Date(s.at).toLocaleString()),h('td',{'data-label':'Type'},s.type),h('td',{'data-label':'Total'},inr(s.total)),h('td',{'data-label':'Variance'},s.type=='close'?inr(s.variance):'—'))))))};
 /* suppliers & purchase orders */
-function supForm(s){const f={name:h('input',{value:s.name||'',placeholder:'Name'}),phone:h('input',{value:s.phone||'',placeholder:'Phone'}),email:h('input',{value:s.email||'',placeholder:'Email'}),addr:h('input',{value:s.addr||'',placeholder:'Address'}),notes:h('input',{value:s.notes||'',placeholder:'Notes'})};
- const x=modal(h('h3',{},s.id?'Edit supplier':'New supplier'),f.name,f.phone,f.email,f.addr,f.notes,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim()},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
+function supForm(s){const f={name:h('input',{value:s.name||'',placeholder:'Name'}),phone:h('input',{value:s.phone||'',placeholder:'Phone'}),email:h('input',{value:s.email||'',placeholder:'Email'}),addr:h('input',{value:s.addr||'',placeholder:'Address'}),notes:h('input',{value:s.notes||'',placeholder:'Notes'}),
+  gstin:h('input',{value:s.gstin||'',placeholder:'GSTIN'}),legalName:h('input',{value:s.legalName||'',placeholder:'Legal / trade name'}),state:h('input',{value:s.state||'',placeholder:'State (auto-filled from GSTIN)'})};
+ const gstNote=h('p',{class:'hint'},'');
+ const fetchBtn=h('button',{class:'sm',onclick:async()=>{const d=gstinDecode(f.gstin.value);if(!d.fmtOk){gstNote.textContent='That does not look like a valid GSTIN format.';return}
+  f.state.value=d.stateName||d.stateCode;gstNote.textContent=(d.checksumOk?'Format + checksum valid. ':'Format valid but checksum looks off. ')+'State derived from GSTIN format.';
+  const live=await gstinLookup(f.gstin.value);if(live){f.legalName.value=live.legalName||live.tradeName||f.legalName.value;gstNote.textContent+=' Name fetched from the configured verification API.'}
+  else if(!cfg().gstinApiKey)gstNote.textContent+=' Add a GSTIN verification API key in Settings to auto-fetch business name & address.'}},'Fetch details');
+ const x=modal(h('h3',{},s.id?'Edit supplier':'New supplier'),f.name,f.phone,f.email,f.addr,f.notes,h('h4',{},'GST / B2B details'),h('div',{class:'row'},f.gstin,fetchBtn),f.legalName,f.state,gstNote,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim(),gstin:f.gstin.value.trim().toUpperCase(),legalName:f.legalName.value.trim(),state:f.state.value.trim()},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
 function supNameOf(id){const s=id&&rec(id);return s?s.name:''}
 function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id},s.name)));
  const items=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,cost:b.cost||0})),...L('stationery').map(s=>({dept:'stat',id:s.id,name:s.name,cost:s.cost||0}))];
@@ -392,14 +489,37 @@ async function receiveLine(po,i,q){const l=po.lines[i];q=Math.max(0,Math.min(q,l
 function poOutstanding(po){return r2((po.payable||0)-(po.payments||[]).reduce((a,p)=>a+p.amt,0))}
 function recordPoPayment(po){const v=prompt('Payment amount (outstanding '+inr(poOutstanding(po))+')');const a=+v;if(!(a>0))return;
  po.payments=po.payments||[];po.payments.push({amt:a,at:now(),by:S.user.id});save('po',po,po.id).then(()=>{audit('supplier_payment',po.no+' '+inr(a));render()})}
+/* Purchase returns (Part 3 #4): a "Return to supplier" action on a received PO line. Accounting choice
+   (judgment call, documented): rather than a separate negative-adjustment record, we reduce the line's
+   `received` count directly and recompute `payable` from it (payable is already defined as
+   sum(received*cost) -- see receiveLine above), so payable/outstanding stay driven from one single
+   source of truth instead of two parallel numbers that could drift out of sync. Stock is decremented
+   back out and a `purchase_return` stockmove entry is logged, symmetric with how `receiveLine` logs a
+   `purchase` entry on the way in. */
+async function returnToSupplier(po,i){const l=po.lines[i];const max=l.received||0;if(!max)return alert('Nothing received on this line yet.');
+ const v=prompt('Quantity to return to supplier (max '+max+')',max);const q=Math.floor(+v);if(!(q>0)||q>max)return;
+ const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=Math.max(0,(it.stock||0)-q);await save(kind,it,it.id);await logStock(l.dept,it.id,it.name||it.title,'purchase_return',-q,po.no)}
+ l.received=max-q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':(po.lines.some(x=>x.received)?'partial':'ordered');
+ po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);await audit('purchase_return',po.no+' '+l.name+' x'+q);render()}
+function supplierLedgerModal(s){const pos=L('po').filter(po=>po.supplier==s.id).sort((a,b)=>b.created>a.created?1:-1);
+ const totalPayable=r2(pos.reduce((a,po)=>a+(po.payable||0),0)),totalPaid=r2(pos.reduce((a,po)=>a+(po.payments||[]).reduce((s2,p)=>s2+p.amt,0),0));
+ const x=modal(h('h3',{},'Statement of account — '+esc(s.name)),
+  h('div',{},'Total payable: '+inr(totalPayable)+' · Total paid: '+inr(totalPaid)+' · Outstanding: '+inr(r2(totalPayable-totalPaid))),
+  h('h4',{},'Purchase orders / goods received ('+pos.length+')'),
+  ...pos.map(po=>h('div',{class:'card',style:'margin:6px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),new Date(po.created).toLocaleDateString(),inr(po.payable||0)),
+   ...po.lines.map(l=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),inr((l.received||0)*l.cost))),
+   ...(po.payments||[]).map(p=>h('div',{class:'row'},'Payment '+new Date(p.at).toLocaleDateString(),'-'+inr(p.amt))))),
+  !pos.length?h('p',{},'No purchase orders for this supplier yet.'):null,
+  h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 V.po=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const pos=L('po').sort((a,b)=>b.created>a.created?1:-1);
  const bySup={};pos.forEach(po=>{const k=po.supplier||'—';bySup[k]=r2((bySup[k]||0)+poOutstanding(po))});
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Suppliers'),h('button',{class:'p sm',onclick:()=>supForm({})},'Add supplier')),
-   ...L('supplier').map(s=>h('div',{class:'row'},s.name+' · '+(s.phone||''),h('span',{},bySup[s.id]?h('b',{class:bySup[s.id]>0?'low':''},'Outstanding '+inr(bySup[s.id])):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit'))))),
+   ...L('supplier').map(s=>h('div',{class:'row'},h('button',{class:'sm',onclick:()=>supplierLedgerModal(s)},s.name+' · '+(s.phone||'')),h('span',{},bySup[s.id]?h('b',{class:bySup[s.id]>0?'low':''},'Outstanding '+inr(bySup[s.id])):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit'))))),
   h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Purchase orders'),h('button',{class:'p sm',onclick:poForm},'New PO')),
    ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier)),po.payable?h('span',{},'Payable '+inr(po.payable)+' · Outstanding '+inr(poOutstanding(po))):null),
     ...po.lines.map((l,i)=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),
-     po.status!='received'?h('span',{},h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:36px;padding:6px'}),h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive')):null)),
+     h('span',{},po.status!='received'?null:null,po.status!='received'?h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:32px;padding:4px'}):null,po.status!='received'?h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive'):null,
+      (l.received||0)>0?h('button',{class:'sm',onclick:()=>returnToSupplier(po,i)},'Return to supplier'):null))),
     poOutstanding(po)>0?h('div',{class:'row'},h('button',{class:'sm',onclick:()=>recordPoPayment(po)},'Record supplier payment')):null))))};
 /* stock adjustments: manager/owner records damaged/lost/found stock with a reason, separate from a
    sale or purchase -- both adjusts the item's stock and appends a 'stockmove' ledger entry */
@@ -420,7 +540,7 @@ function stockAdjCard(){const items=stockAdjItems();const pick=h('select',{},...
 function rentTierText(){return 'Returned within 7 days: 80% refund. Within 30 days: 70%. Within 60 days: 60%. After 60 days: deposit forfeited.'}
 function rentalReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)}<hr><b>Refund schedule if returned:</b><br>${rentTierText()}<br><hr>Bring this slip (or your phone number) when you return the book.`}
 function rentalRefundReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>Rental return ${r.no}<br>Book: ${esc(r.bookTitle)}<br>Held ${r.heldDays} day(s)<br>Deposit ${inr(r.deposit)} · Refund ${r.refundPct*100}% = ${inr(r.refund)}<br>Refunded: ${(r.refundPays||[]).map(p=>p.m+' '+p.amt).join(', ')}<br>Thank you!`}
-function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0);const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
+function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0&&b.rentable!==false&&(b.status||'active')!='inactive');const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
  const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
  const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
  useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
@@ -486,7 +606,7 @@ V.crm=()=>{const q=(S.crmQ||'').toLowerCase();let custs=L('customer').sort((a,b)
  if(q)custs=custs.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q));
  return h('div',{class:'card'},h('h3',{},'Customers ('+custs.length+')'),h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search name or phone',value:S.crmQ||'',oninput:e=>{S.crmQ=e.target.value;render()}})),
   h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Phone'),h('th',{},'Visits'),h('th',{},'Last visit'),h('th',{},'Points'),h('th',{},'Credit'),h('th',{},'Membership'),h('th',{})),
-   ...custs.map(c=>{const m=activeMembership(c.phone);return h('tr',{},h('td',{'data-label':'Name'},esc(c.name||'')),h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
+   ...custs.map(c=>{const m=activeMembership(c.phone);return h('tr',{},h('td',{'data-label':'Name'},esc(c.name||''),c.b2b?h('span',{class:'tag',style:'margin-left:5px'},'B2B'):null),h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
     h('td',{'data-label':'Points'},c.points||0),h('td',{'data-label':'Credit'},inr(c.credit||0)),h('td',{'data-label':'Membership'},m&&m.status=='active'&&m.expiresAt>now()?(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label:'—'),
     h('td',{},h('button',{class:'sm',onclick:()=>custModal({cust:{name:c.name,phone:c.phone}})},'View')))}),
   !custs.length?h('p',{},'No customers yet — they are added automatically at checkout, rental or membership check-in.'):null))};
@@ -528,12 +648,19 @@ function importModal(dept){const inp=h('input',{type:'file',accept:'.csv'});cons
 function bookForm(b){const f={title:h('input',{value:b.title||'',placeholder:'Title'}),author:h('input',{value:b.author||'',placeholder:'Author'}),publisher:h('input',{value:b.publisher||'',placeholder:'Publisher'}),isbn:h('input',{value:b.isbn||'',placeholder:'ISBN / barcode'}),
   cat:h('select',{},...L('cat').filter(c=>c.dept=='book').map(c=>h('option',{value:c.id,selected:c.id==b.cat},c.name))),
   supplier:h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==b.supplier},s.name))),
-  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'})};
+  cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),mrp:h('input',{type:'number',value:b.mrp??'',placeholder:'MRP (printed price, optional)'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'}),
+  edition:h('input',{value:b.edition||'',placeholder:'Edition (optional)'}),language:h('input',{value:b.language||'',placeholder:'Language (optional)'}),subcat:h('input',{value:b.subcat||'',placeholder:'Subcategory (free text, optional)'}),rack:h('input',{value:b.rack||'',placeholder:'Rack / shelf location (optional)'}),coverUrl:h('input',{value:b.coverUrl||'',placeholder:'Cover image URL (optional)'}),
+  rentable:h('input',{type:'checkbox',checked:b.rentable!==false}),
+  status:h('select',{},...['active','inactive'].map(s=>h('option',{value:s,selected:(b.status||'active')==s},s)))};
  const genBtn=h('button',{class:'sm',onclick:()=>{f.isbn.value=genCode('BK')}},'Generate barcode');
- const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.price,f.stock,f.reorder,f.hsn,h('p',{class:'hint'},'Books are GST-exempt (0%) by law.'),
+ const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.mrp,f.price,f.stock,f.reorder,f.hsn,
+  h('div',{class:'row'},f.edition,f.language),f.subcat,f.rack,f.coverUrl,
+  h('div',{class:'row'},h('label',{},f.rentable,' Rentable (appears in Rent-a-book)'),h('label',{},'Status',f.status)),
+  h('p',{class:'hint'},'Books are GST-exempt (0%) by law. Inactive books stay in Inventory for records but are hidden from Sell and Rent-a-book.'),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.title.value||!f.cat.value||!(+f.price.value>0))return alert('Title, category and sell price are needed.');
    if(b.id&&(b.stock!=+f.stock.value||b.price!=+f.price.value))await audit('edit_book',b.title+' stock '+(b.stock??0)+'->'+f.stock.value+' price '+(b.price??0)+'->'+f.price.value);
-   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,price:+f.price.value,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim()},b.id);x();render()}},'Save'),
+   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,mrp:f.mrp.value===''?null:+f.mrp.value,price:+f.price.value,stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim(),
+    edition:f.edition.value.trim(),language:f.language.value.trim(),subcat:f.subcat.value.trim(),rack:f.rack.value.trim(),coverUrl:f.coverUrl.value.trim(),rentable:f.rentable.checked,status:f.status.value},b.id);x();render()}},'Save'),
    h('button',{onclick:()=>{if(!f.isbn.value)return alert('Enter or generate a barcode first');printBarcode(f.isbn.value,f.title.value)}},'Print barcode'),
    b.id?h('button',{onclick:async()=>{await save('book',b,b.id,true);x();render()}},'Delete'):null))}
 function stockForm(dept,it){const kind=DEPT_KIND[dept];
@@ -560,7 +687,7 @@ V.inv=()=>{if(!can('o'))return h('p',{},'Owner only.');const catsFor=d=>L('cat')
    ...catsFor(dept).map(c=>h('span',{class:'tag',style:'margin-right:6px'},c.name,' ',h('button',{class:'sm',onclick:()=>confirm('Delete category?')&&save('cat',c,c.id,true).then(render)},'x')))),
   h('div',{class:'card'},h('h3',{},DM[dept].label+' ('+items.length+')'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Price'),h('th',{},'GST%'),h('th',{},'Stock'),h('th',{})),
    ...items.map(it=>{const label=dept=='book'?it.title:it.name;const tracked=dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder;
-    return h('tr',{},h('td',{'data-label':'Name'},label),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))}))))};
+    return h('tr',{},h('td',{'data-label':'Name'},it.coverUrl?h('img',{src:it.coverUrl,style:'width:22px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:5px'}):null,label,dept=='book'&&(it.status||'active')=='inactive'?h('span',{class:'tag'},'inactive'):null),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))}))))};
  const tables=L('table');
  return h('div',{},sect('book'),sect('cafe'),sect('stat'),
   h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Cafe tables (QR self-order)'),h('button',{class:'p sm',onclick:()=>{const n=prompt('Table name/number, e.g. T1');n&&save('table',{name:n}).then(render)}},'Add table')),
@@ -570,14 +697,46 @@ V.staff=()=>{if(!can('o'))return h('p',{},'Owner only.');
   h('table',{class:'rtable'},h('tr',{},h('th',{},'Email'),h('th',{},'Role')),
    ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))};
 V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l,t)=>h('label',{style:'display:grid;gap:4px'},l,h('input',{type:t||'text',value:s[k],style:'width:100%',oninput:e=>F[k]=t=='number'?+e.target.value:e.target.value}));
- return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),h('button',{class:'p',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save')),
+ return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),
+  f('homeState','Home state (for CGST/SGST vs IGST — must match a GSTIN-derived state name, e.g. "Maharashtra")'),
+  f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),
+  h('h4',{},'GSTIN verification (optional)'),h('p',{class:'hint'},'GSTIN state-derivation and checksum validation works with no setup. Business name/address auto-fetch needs a paid third-party GSTIN-verification API (Surepass/Appyflow/ClearTax etc) — this app does not include one. Add your own key+endpoint here to enable it; leave blank to keep using format-derived data only.'),
+  f('gstinApiUrl','Verification API endpoint (GSTIN appended to the end)'),f('gstinApiKey','Verification API key'),
+  h('button',{class:'p',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save')),
  h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')),
  h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
   h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
    ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
   !L('audit').length?h('p',{},'No audit entries yet.'):null))};
-function tabs(){const T=[['pos','Sell'],['orders','Orders'],['torders','Tables'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
-const TAB_ICON={pos:'cart',orders:'orders',torders:'table',rentals:'rental',membership:'clock',crm:'people',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
+function tabs(){const T=[['dash','Home'],['pos','Sell'],['orders','Orders'],['torders','Tables'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
+const TAB_ICON={dash:'dash',pos:'cart',orders:'orders',torders:'table',rentals:'rental',membership:'clock',crm:'people',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
+/* Unified Dashboard (Part 3 #1): the home screen, first tab. Deliberately reuses rangeOrders/
+   expectedCash/lastShift/etc rather than recomputing sales totals a second way. */
+V.dash=()=>{const today=new Date().toLocaleDateString('en-CA'),monthStart=today.slice(0,8)+'01';
+ const todayOrders=rangeOrders(today,today),monthOrders=rangeOrders(monthStart,today);
+ const todaySales=r2(todayOrders.reduce((a,o)=>a+o.t.total,0)),monthSales=r2(monthOrders.reduce((a,o)=>a+o.t.total,0));
+ let booksToday=0,statToday=0;todayOrders.forEach(o=>o.lines.forEach(l=>{if(l.dept=='book')booksToday+=l.qty;if(l.dept=='stat')statToday+=l.qty}));
+ const rentals=L('rental'),openRentals=rentals.filter(r=>r.status=='open');
+ const overdueRentals=openRentals.filter(r=>Math.floor((Date.now()-new Date(r.rentedAt))/86400000)>60);
+ const activeMemberships=L('membership').filter(m=>m.status=='active'&&m.expiresAt>now());
+ const lowStockCount=L('book').filter(b=>b.reorder!=null&&(b.stock||0)<=b.reorder).length+L('cafeitem').filter(i=>i.track&&i.reorder!=null&&(i.stock||0)<=i.reorder).length+L('stationery').filter(i=>i.reorder!=null&&(i.stock||0)<=i.reorder).length;
+ const todayExp=r2(L('exp').filter(e=>e.d==today).reduce((a,e)=>a+e.amt,0));
+ const last=lastShift(),open=shiftIsOpen(),cashExpected=open?expectedCash(last.at,last.total):null;
+ let costTot=0;todayOrders.forEach(o=>o.lines.forEach(l=>{const itm=rec(l.id);costTot+=((itm&&itm.cost)||0)*l.qty}));
+ const profitToday=r2(todaySales-costTot-todayExp);
+ const tile=(k,v,warn)=>h('div',{class:'stat-tile'+(warn?' warn':'')},h('div',{class:'v'},v),h('div',{class:'k'},k));
+ return h('div',{},h('div',{class:'card'},h('h3',{},'Today'),h('div',{class:'dashgrid'},
+   tile('Sales today',inr(todaySales)),tile('Sales this month',inr(monthSales)),tile('Total customers',L('customer').length),tile('Visits today',todayOrders.length),
+   tile('Books sold today',booksToday),tile('Stationery sold today',statToday),tile('Active rentals',openRentals.length),
+   tile('Rentals overdue (>60d)',overdueRentals.length,overdueRentals.length>0),tile('Active memberships',activeMemberships.length),
+   tile('Low-stock items',lowStockCount,lowStockCount>0),tile('Expenses today',inr(todayExp)),
+   tile('Cash expected in drawer',open?inr(cashExpected):'No open shift'),tile('Est. profit today',inr(profitToday)))),
+  h('div',{class:'card'},h('h3',{},'Quick actions'),h('div',{class:'row'},
+   h('button',{class:'p',onclick:()=>{S.tab='pos';render()}},'New sale'),
+   h('button',{onclick:()=>{S.tab='rentals';render();rentBookModal()}},'Rent a book'),
+   h('button',{onclick:()=>{S.tab='membership';render();buyMembershipModal()}},'Sell membership'),
+   h('button',{onclick:()=>{S.tab='rep';render()}},'Add expense'))),
+  overdueRentals.length?h('div',{class:'card'},h('h3',{},'Needs attention: overdue rentals'),...overdueRentals.map(r=>h('div',{class:'row'},esc(r.bookTitle)+' · '+esc((r.cust||{}).name||''),h('button',{class:'sm',onclick:()=>{S.tab='rentals';render()}},'View')))):null)};
 function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},icon(TAB_ICON[k]||'more',18),' '+n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reload()}
 function render(){const T=tabs();
