@@ -374,7 +374,7 @@ V.po=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const pos=L('po
 function stockAdjItems(){return[...L('book').map(b=>({dept:'book',id:b.id,name:b.title})),...L('cafeitem').filter(i=>i.track).map(i=>({dept:'cafe',id:i.id,name:i.name})),...L('stationery').map(i=>({dept:'stat',id:i.id,name:i.name}))]}
 async function commitStockAdj(dept,id,type,qty,note){const kind=DEPT_KIND[dept],it=rec(id);if(!it)return;
  it.stock=Math.max(0,(it.stock||0)+qty);await save(kind,it,it.id);await logStock(dept,it.id,it.name||it.title,type,qty,note);await audit('stock_'+type,(it.name||it.title)+' '+(qty>0?'+':'')+qty+(note?' ('+note+')':''))}
-function stockLedgerModal(dept,id,name){const rows=stockLedger(dept,id);let run=0;const withRun=rows.slice().reverse().map(m=>{run+=m.qty;return{...m,run}}).reverse();
+function stockLedgerModal(dept,id,name){const rows=stockLedger(dept,id);let run=0;const withRun=rows.map(m=>{run+=m.qty;return{...m,run}});
  const x=modal(h('h3',{},'Stock ledger — '+esc(name)),h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Type'),h('th',{},'Qty'),h('th',{},'Running total'),h('th',{},'Note')),
   ...withRun.map(m=>h('tr',{},h('td',{'data-label':'When'},new Date(m.at).toLocaleString()),h('td',{'data-label':'Type'},m.type),h('td',{'data-label':'Qty'},(m.qty>0?'+':'')+m.qty),h('td',{'data-label':'Running total'},m.run),h('td',{'data-label':'Note'},esc(m.note||''))))),
   !rows.length?h('p',{},'No movements logged yet.'):null,h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
