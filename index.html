@@ -1,6 +1,6 @@
 <!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Bookstore POS</title><link rel=manifest href=/manifest.json><link rel=icon href=/icon.svg><meta name=theme-color content=#2e2a5a>
 <style>
-:root{--book:#4b3f8f;--cafe:#8a5a2b;--stat:#1f7a6c;--accent:var(--book);--bg:#f7f7f5;--card:#fff;--ink:#1a1a1a;--sub:#6b6b6b;--line:#e3e3de;--r:12px}
+:root{--book:#4b3f8f;--cafe:#8a5a2b;--stat:#1f7a6c;--accent:#141414;--rail:#141414;--bg:#f7f7f5;--card:#fff;--ink:#1a1a1a;--sub:#6b6b6b;--line:#e3e3de;--r:12px}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px}
 button,input,select,textarea{font:inherit;font-size:16px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;color:inherit;min-height:44px}
@@ -8,19 +8,31 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button.sm{min-height:36px;padding:6px 10px;font-size:13px}
 button.p,button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 button:disabled{opacity:.4}
+button.pill{border-radius:999px;padding:8px 16px}
+button.pill.sm{padding:6px 13px}
 label{display:flex;align-items:center;gap:6px;font-size:14px}
+.ico{display:inline-flex;flex:none;align-items:center;justify-content:center;color:currentColor}
+.ico svg{display:block;width:100%;height:100%}
 header.top{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--accent);color:#fff;position:sticky;top:0;z-index:6}
 header.top .ttl{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .stat{margin-left:auto;font-size:12px;opacity:.9;white-space:nowrap}
 header.top button{background:#ffffff22;color:#fff;border-color:#ffffff44;min-height:36px;padding:7px 10px}
-.desktop-tabs{display:flex;gap:4px;flex-wrap:wrap;padding:8px 14px;background:#fff;border-bottom:1px solid var(--line);margin:0}
-nav.bottom{display:none}
-@media(max-width:840px){
- .desktop-tabs{display:none}
- nav.bottom{display:flex;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);z-index:12;padding-bottom:env(safe-area-inset-bottom)}
- nav.bottom button{flex:1;border:none;border-radius:0;background:transparent;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;min-height:58px}
- nav.bottom button.on{color:var(--accent);font-weight:700}
- body{padding-bottom:64px}
+nav.rail{display:none}
+nav.bottom{display:flex;position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);z-index:12;padding-bottom:env(safe-area-inset-bottom)}
+nav.bottom button{flex:1;border:none;border-radius:0;background:transparent;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;min-height:58px}
+nav.bottom button .ico{width:21px;height:21px}
+nav.bottom button.on{color:var(--accent);font-weight:700}
+body{padding-bottom:64px}
+@media(min-width:1024px){
+ nav.bottom{display:none}
+ body{padding-bottom:8px;padding-left:68px}
+ header.top{margin-left:68px}
+ .wrap{margin-left:0}
+ nav.rail{display:flex;flex-direction:column;align-items:center;gap:5px;position:fixed;left:0;top:0;bottom:0;width:68px;background:var(--rail);padding:14px 0;z-index:15;overflow-y:auto}
+ nav.rail button{background:transparent;border:none;color:#ffffffa8;width:44px;height:44px;min-height:44px;border-radius:12px;padding:0;display:flex;align-items:center;justify-content:center}
+ nav.rail button .ico{width:22px;height:22px}
+ nav.rail button.on{background:#ffffff20;color:#fff}
+ nav.rail button:hover{background:#ffffff14}
 }
 .wrap{max-width:1200px;margin:0 auto;padding:12px;display:grid;gap:12px}
 .g{display:grid;grid-template-columns:1fr 380px;gap:12px}
@@ -53,10 +65,20 @@ td,th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
 }
 small{color:var(--sub)}.low{color:#b3261e;font-weight:700}.oos{opacity:.45}
 .tag{font-size:11px;background:#eef0e8;border-radius:6px;padding:2px 6px}
+.tag-book{background:#ece9f9;color:#4b3f8f}.tag-cafe{background:#f7ece0;color:#8a5a2b}.tag-stat{background:#e2f3f0;color:#1f7a6c}
 .hint{font-size:12px;color:var(--sub)}
+.empty-hint{text-align:center;color:var(--sub);padding:28px 10px;font-size:14px}
 .denoms{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
 .denoms label{display:flex;flex-direction:column;gap:2px;font-size:12px;text-align:center}
 .denoms input{width:100%;text-align:center;padding:8px 4px;min-height:40px}
+.items .price{color:var(--sub);font-size:13px;font-weight:400}
+.order-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.order-hd h3{text-transform:uppercase;letter-spacing:.07em;font-size:13px;font-weight:800;margin:0}
+.order-hd small{color:var(--sub)}
+.peek-lbl{display:flex;align-items:center;gap:8px}
+.search-row{display:flex;align-items:center;gap:8px}
+.search-row .ico{color:var(--sub)}
+.search-row input{flex:1}
 </style></head><body><div id=app></div>
 <script src=https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js></script>
 <script src=https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js></script>
@@ -67,9 +89,31 @@ const C=window.CFG||{},sb=supabase.createClient(C.url,C.key),S={tab:'pos',dept:'
 const $=s=>document.querySelector(s),uid=()=>crypto.randomUUID(),now=()=>new Date().toISOString(),r2=n=>Math.round(n*100)/100,inr=n=>cfg().cur+r2(n);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const h=(t,a={},...k)=>{const e=document.createElement(t);for(const x in a){const v=a[x];if(v==null||v===false)continue;x.startsWith('on')?e[x]=v:x=='class'?e.className=v:e.setAttribute(x,v)}e.append(...k.flat().filter(x=>x!=null&&x!==false));return e};
+/* hand-drawn "doodle" icon set: inline SVG, single stroke, no fill, organic rounded linework */
+const ICONS={
+ cart:'<path d="M6 8 L7.3 20 Q7.4 21 8.4 21 H16 Q17 21 17.1 20 L18.3 8"/><path d="M9 8.3 C8.8 5.1 9.6 3.4 12 3.5 C14.4 3.4 15.2 5.2 15 8.3"/><path d="M5.5 8 H18.6"/>',
+ orders:'<path d="M6.3 3.2 H17 V20.3 L14.5 18.4 L12 20.3 L9.5 18.4 L6.3 20.3 Z"/><path d="M9 7.3 H14.2"/><path d="M9 10.6 H14"/><path d="M9 13.9 H12.4"/>',
+ table:'<rect x="4" y="4" width="6.3" height="6.3" rx="1.2"/><rect x="13.7" y="4" width="6.3" height="6.3" rx="1.2"/><rect x="4" y="13.7" width="6.3" height="6.3" rx="1.2"/><path d="M15 15 H19.3 M15 19.3 H19.3 M17.1 15 V19.3"/>',
+ returns:'<path d="M5 9.2 A8 8 0 1 1 4.3 14.5"/><path d="M4 5 L4.9 9.2 L9.1 8.3"/>',
+ purchase:'<path d="M4 14 H8 L10 17 H14 L16 14 H20"/><path d="M4.2 14 L6.1 6 H17.9 L19.8 14"/><path d="M4 14 V19 Q4 20.2 5.1 20.2 H18.9 Q20 20.2 20 19 V14"/>',
+ reports:'<path d="M4.3 20 V4"/><path d="M4.3 20 H20"/><path d="M7 17 V12.4"/><path d="M11.4 17 V8.2"/><path d="M15.8 17 V13.5"/><path d="M13 5.3 L17.3 4.3 L18.3 8.4"/><path d="M17.3 4.3 L11.7 9.7 L8.6 6.9 L4.3 11"/>',
+ shift:'<circle cx="12" cy="13" r="7.4"/><path d="M12 9 V13 L15.1 15"/><path d="M9.2 3 H14.8"/>',
+ inv:'<path d="M4.2 8 L12 4.4 L19.8 8 L12 11.6 Z"/><path d="M4.2 8 V16.4 L12 20 L19.8 16.4 V8"/><path d="M12 11.6 V20"/>',
+ staff:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20 C5.4 15 8 13 12 13 C16 13 18.6 15 19 20"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M12 3.4 V6.1 M12 17.9 V20.6 M3.4 12 H6.1 M17.9 12 H20.6 M6.1 6.1 L7.9 7.9 M16.1 16.1 L17.9 17.9 M17.9 6.1 L16.1 7.9 M7.9 16.1 L6.1 17.9"/>',
+ more:'<circle cx="6" cy="6" r="1.4"/><circle cx="12" cy="6" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="12" cy="18" r="1.4"/><circle cx="18" cy="18" r="1.4"/>',
+ search:'<circle cx="10.4" cy="10.4" r="6"/><path d="M15 15 L20 20"/>',
+ scan:'<path d="M4 8.3 V5 H8.3"/><path d="M15.7 5 H20 V8.3"/><path d="M20 15.7 V19 H15.7"/><path d="M8.3 19 H4 V15.7"/><path d="M6.8 12 H17.2"/>',
+ plus:'<path d="M12 5 V19 M5 12 H19"/>',
+ minus:'<path d="M5 12 H19"/>',
+ close:'<path d="M5.3 5.3 L18.7 18.7 M18.7 5.3 L5.3 18.7"/>',
+ print:'<path d="M6.3 9 V4.3 H17.8 V9"/><path d="M4 9 H20 V16 H17"/><path d="M7 16 H17 V20 H7 Z"/><path d="M4 9 V16 H7"/>',
+ share:'<path d="M4.2 12 C4.2 7.6 8 4.6 12.1 4.6 C16.2 4.6 20 7.6 20 12 C20 16.1 16.4 18.9 12.4 18.9 C10.9 18.9 9.6 18.6 8.6 18 L4.6 19.2 L5.7 15.6 C4.7 14.5 4.2 13.3 4.2 12 Z"/>',
+};
+const icon=(name,size)=>{const s=h('span',{class:'ico'});s.style.width=s.style.height=(size||20)+'px';s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||ICONS.more}</svg>`;return s};
 const L=k=>Object.values(R).filter(r=>r.kind==k&&!r.deleted).map(r=>r.data),rec=id=>R[id]&&!R[id].deleted?R[id].data:null;
 const cfg=()=>({name:'My Bookstore & Cafe',addr:'',phone:'',taxid:'',tax:5,ptsPer:100,prefix:'INV',cur:'₹',...(R.settings&&R.settings.data)}),can=x=>S.role=='owner'||(x=='m'&&S.role=='manager');
-const DM={book:{label:'Books',accent:'var(--book)',gst:0},cafe:{label:'Cafe',accent:'var(--cafe)',gst:5},stat:{label:'Stationery',accent:'var(--stat)',gst:18}};
+const DM={book:{label:'Books',gst:0},cafe:{label:'Cafe',gst:5},stat:{label:'Stationery',gst:18}};
 const DEPT_KIND={book:'book',cafe:'cafeitem',stat:'stationery'};
 const DENOMS=[{v:2000,rare:true},{v:500},{v:200},{v:100},{v:50},{v:20},{v:10},{v:5},{v:2},{v:1}];
 const normPhone=p=>(p||'').replace(/\D/g,'');
@@ -178,16 +222,16 @@ V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=t
   :L('stationery').filter(i=>q?matchQ(i.name,i.sku):i.cat==S.cat).sort((a,b)=>a.name.localeCompare(b.name));
  const itemBtn=(low,oos,onclick,...content)=>h('button',{class:oos?'oos':'',disabled:oos&&!can('m'),onclick},...content,low&&!oos?h('div',{class:'tag low'},'Low stock'):null,oos?h('div',{class:'tag'},'Out of stock'):null);
  const browse=h('div',{},
-  h('div',{class:'row'},...['book','cafe','stat'].map(d=>h('button',{class:S.dept==d?'on':'',onclick:()=>{S.dept=d;S.q='';render()}},DM[d].label))),
-  h('input',{placeholder:'Scan or type barcode/ISBN, Enter',onkeydown:e=>{if(e.key=='Enter'){scan(e.target.value);e.target.value=''}}}),
-  h('input',{placeholder:'Search',value:S.q,oninput:e=>{S.q=e.target.value;render()}}),
-  h('div',{class:'row',style:'justify-content:flex-start'},...cats.map(c=>h('button',{class:(c.id==S.cat&&!q)?'on sm':'sm',onclick:()=>{S.cat=c.id;S.q='';render()}},c.name))),
+  h('div',{class:'row'},...['book','cafe','stat'].map(d=>h('button',{class:(S.dept==d?'on':'')+' pill',onclick:()=>{S.dept=d;S.q='';render()}},DM[d].label))),
+  h('div',{class:'search-row'},icon('scan',18),h('input',{placeholder:'Scan or type barcode/ISBN, Enter',onkeydown:e=>{if(e.key=='Enter'){scan(e.target.value);e.target.value=''}}})),
+  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search',value:S.q,oninput:e=>{S.q=e.target.value;render()}})),
+  h('div',{class:'row',style:'justify-content:flex-start'},...cats.map(c=>h('button',{class:((c.id==S.cat&&!q)?'on sm':'sm')+' pill',onclick:()=>{S.cat=c.id;S.q='';render()}},c.name))),
   h('div',{class:'items'},...itemsList.map(it=>{const tracked=S.dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;const label=S.dept=='book'?it.title:it.name;
-   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(S.dept,it.id,label,it.price,it.gst||0)},h('b',{},label),S.dept=='book'&&it.author?h('small',{},it.author):null,inr(it.price),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
+   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(S.dept,it.id,label,it.price,it.gst||0)},h('b',{},label),S.dept=='book'&&it.author?h('small',{},it.author):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
   itemsList.length?null:h('p',{},cats.length||q?'No items here.':'Add categories and items in Inventory.'));
- const cartBody=h('div',{class:'sheetbody'},h('h3',{},o.no?'Order '+o.no:'New sale'),
-  ...o.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',h('span',{class:'tag'},(DM[l.dept]||{}).label||l.dept),l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1)},'+'),can('m')?h('button',{class:'sm',onclick:()=>lineDisc(l)},'%'):null),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
-  o.lines.length?null:h('p',{},'Scan a barcode or tap an item to add it.'),
+ const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),o.no?h('small',{},o.no):null),
+  ...o.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',h('span',{class:'tag tag-'+l.dept},(DM[l.dept]||{}).label||l.dept),l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1)},'+'),can('m')?h('button',{class:'sm',onclick:()=>lineDisc(l)},'%'):null),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
+  o.lines.length?null:h('p',{class:'empty-hint'},'Scan a barcode or tap an item to add it.'),
   h('div',{class:'row'},h('input',{placeholder:'Customer name',style:'width:48%',value:o.cust.name||'',oninput:e=>o.cust.name=e.target.value}),h('input',{placeholder:'Phone',style:'width:48%',value:o.cust.phone||'',oninput:e=>o.cust.phone=e.target.value})),
   h('div',{class:'row'},h('button',{class:'sm',onclick:()=>custModal(o)},'Customer lookup')),
   h('div',{class:'row'},'Subtotal',inr(t.sub)),
@@ -195,7 +239,7 @@ V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=t
   h('div',{class:'row'},'GST',inr(t.tax)),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(t.total))),
   h('div',{class:'row'},h('button',{onclick:hold,disabled:!o.lines.length},'Hold'),h('button',{class:'p',onclick:pay,disabled:!o.lines.length},'Pay')),
   h('button',{onclick:async()=>{if(o.no&&o.status=='held'){if(!can('m'))return alert('Manager only');if(!confirm('Cancel held sale?'))return;o.status='void';await persist()}S.cur=null;render()}},'Clear sale'));
- const cartSheet=h('div',{class:'cartsheet'+(S.cartOpen?' open':'')},h('div',{class:'peek',onclick:()=>{S.cartOpen=!S.cartOpen;render()}},h('span',{},'Cart ('+o.lines.reduce((a,l)=>a+l.qty,0)+') · '+inr(t.total)),h('span',{},S.cartOpen?'▲':'▼')),cartBody);
+ const cartSheet=h('div',{class:'cartsheet'+(S.cartOpen?' open':'')},h('div',{class:'peek',onclick:()=>{S.cartOpen=!S.cartOpen;render()}},h('span',{class:'peek-lbl'},icon('cart',18),'Cart ('+o.lines.reduce((a,l)=>a+l.qty,0)+') · '+inr(t.total)),h('span',{},S.cartOpen?'▲':'▼')),cartBody);
  return h('div',{class:'g'},browse,cartSheet)};
 V.orders=()=>{const os=L('order').filter(o=>o.t).sort((a,b)=>b.created>a.created?1:-1),held=os.filter(o=>o.status=='held');
  return h('div',{},h('div',{class:'card'},h('h3',{},'Held sales ('+held.length+')'),...held.map(o=>h('div',{class:'row'},o.no+' · '+(o.cust.name||'walk-in'),h('b',{},inr(o.t.total)),h('button',{class:'p sm',onclick:()=>{S.cur=structuredClone(o);S.tab='pos';render()}},'Resume')))),
@@ -363,13 +407,14 @@ V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l
  return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),h('button',{class:'p',onclick:async()=>{await save('set',{...s,...F},'settings');alert('Saved')}},'Save')),
  h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')))};
 function tabs(){const T=[['pos','Sell'],['orders','Orders'],['torders','Tables']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
-function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
+const TAB_ICON={pos:'cart',orders:'orders',torders:'table',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
+function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},icon(TAB_ICON[k]||'more',18),' '+n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reload()}
-function render(){const T=tabs();document.documentElement.style.setProperty('--accent',(DM[S.dept]||DM.book).accent);
+function render(){const T=tabs();
  const header=h('header',{class:'top'},h('span',{class:'ttl'},cfg().name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
- const dtabs=h('div',{class:'desktop-tabs'},...T.map(([k,n])=>h('button',{class:(S.tab==k?'on':'')+' sm',onclick:()=>{S.tab=k;render()}},n)));
- const bottom=h('nav',{class:'bottom'},...T.slice(0,4).map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},n)),h('button',{class:T.slice(4).some(([k])=>k==S.tab)?'on':'',onclick:()=>moreMenu(T.slice(4))},'More'));
- $('#app').replaceChildren(header,dtabs,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote()}
+ const rail=h('nav',{class:'rail'},...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',title:n,onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',22))));
+ const bottom=h('nav',{class:'bottom'},...T.slice(0,4).map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',20),h('span',{},n))),h('button',{class:T.slice(4).some(([k])=>k==S.tab)?'on':'',onclick:()=>moreMenu(T.slice(4))},icon('more',20),h('span',{},'More')));
+ $('#app').replaceChildren(header,rail,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote()}
 function login(){const e=h('input',{type:'email',placeholder:'Email'}),p=h('input',{type:'password',placeholder:'Password'}),m=h('div');$('#app').replaceChildren(h('div',{class:'md',style:'margin:12vh auto'},h('h2',{},'Sign in'),e,p,m,h('button',{class:'p',onclick:async()=>{const{error}=await sb.auth.signInWithPassword({email:e.value.trim(),password:p.value});error?m.textContent=error.message:boot()}},'Sign in')))}
 async function loadProfiles(){if(!can('o'))return;try{const{data,error}=await sb.from('profiles').select('*').order('email');if(!error){PROFILES=data||[];if(S.tab=='staff')render()}}catch(e){}}
 async function seed(){localStorage.seeded=1;const bc=uid(),cc=uid();await save('cat',{name:'Fiction',dept:'book',n:1},bc);await save('cat',{name:'Beverages',dept:'cafe',n:1},cc);
@@ -395,11 +440,11 @@ async function pubSubmit(){if(!PUB.cart.length)return;
  PUB.cart=[];PUB.note='';renderPublic();alert('Order sent to the counter! You can keep adding items.')}
 function renderPublic(){const q=PUB.q.trim().toLowerCase();const items=PUB.items.filter(i=>q?i.name.toLowerCase().includes(q):i.cat==PUB.cat).sort((a,b)=>a.name.localeCompare(b.name));const total=r2(PUB.cart.reduce((a,l)=>a+l.price*l.qty,0));
  const menu=h('div',{class:'wrap'},
-  h('div',{class:'row'},...PUB.cats.map(c=>h('button',{class:(c.id==PUB.cat&&!q)?'on sm':'sm',onclick:()=>{PUB.cat=c.id;PUB.q='';renderPublic()}},c.name))),
-  h('input',{placeholder:'Search menu',value:PUB.q,oninput:e=>{PUB.q=e.target.value;renderPublic()}}),
-  h('div',{class:'items'},...items.map(it=>h('button',{onclick:()=>pubAdd(it)},h('b',{},it.name),inr(it.price)))),items.length?null:h('p',{},'Nothing here yet.'),
+  h('div',{class:'row'},...PUB.cats.map(c=>h('button',{class:((c.id==PUB.cat&&!q)?'on sm':'sm')+' pill',onclick:()=>{PUB.cat=c.id;PUB.q='';renderPublic()}},c.name))),
+  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search menu',value:PUB.q,oninput:e=>{PUB.q=e.target.value;renderPublic()}})),
+  h('div',{class:'items'},...items.map(it=>h('button',{onclick:()=>pubAdd(it)},h('b',{},it.name),h('span',{class:'price'},inr(it.price))))),items.length?null:h('p',{},'Nothing here yet.'),
   h('div',{class:'card'},h('h3',{},'Your order'),...PUB.cart.map(l=>h('div',{class:'row'},l.name,h('span',{},h('button',{class:'sm',onclick:()=>pubQty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>pubQty(l,1)},'+')),inr(l.price*l.qty))),
-   PUB.cart.length?null:h('p',{},'Tap an item to add it.'),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(total))),
+   PUB.cart.length?null:h('p',{class:'empty-hint'},'Tap an item to add it.'),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(total))),
    h('input',{placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
  $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu)}
