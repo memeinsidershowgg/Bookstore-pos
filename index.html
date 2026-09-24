@@ -178,9 +178,22 @@ function wa(o){let p=((o.cust||{}).phone||prompt('Customer phone')||'').replace(
  open('https://wa.me/'+p+'?text='+encodeURIComponent(`Thanks for visiting ${cfg().name}!\nBill ${o.no}\n`+o.lines.map(l=>`${l.qty}x ${l.name}: ${inr(l.price*l.qty)}`).join('\n')+`\nTotal: ${inr(o.t.total)}\n\nView/print your bill: ${link}`),'_blank')}
 function modal(...k){const o=h('div',{class:'ov',onclick:e=>e.target==o&&o.remove()},h('div',{class:'md'},...k));document.body.append(o);return()=>o.remove()}
 function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
-function printBarcode(code,title){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
+/* QR/barcode generation depends on the qrcode/jsbarcode CDN scripts loaded in <head>. If either script
+   fails to load (offline first paint, a blocked/slow CDN, a strict network) the global (QRCode /
+   JsBarcode) is simply undefined and calling it threw an uncaught ReferenceError from inside a plain
+   onclick — nothing printed and nothing visible happened, which is exactly what showed up as
+   "Table QR is not working". Both entry points now check the global first and show a clear, actionable
+   alert instead of failing silently, and printTableQR also catches any error QRCode.toCanvas itself
+   raises (e.g. an oversized/invalid payload) so the failure is always visible to staff. */
+function printBarcode(code,title){if(typeof JsBarcode=='undefined')return alert('Barcode library did not load (check your internet connection) — try again in a moment.');
+ try{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
+ catch(e){console.error('printBarcode',e);alert('Could not generate the barcode: '+e.message)}}
 function tableQRUrl(t){return location.origin+'/?order=1&t='+encodeURIComponent(t.id)+'&tn='+encodeURIComponent(t.name)}
-function printTableQR(t){const url=tableQRUrl(t),cv=document.createElement('canvas');QRCode.toCanvas(cv,url,{width:200,margin:1},()=>{prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
+function printTableQR(t){if(typeof QRCode=='undefined')return alert('QR code library did not load (check your internet connection) — try again in a moment.');
+ const url=tableQRUrl(t),cv=document.createElement('canvas');
+ try{QRCode.toCanvas(cv,url,{width:200,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
+  prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
+ catch(e){console.error('printTableQR',e);alert('Could not generate the QR code: '+e.message)}}
 /* selling */
 function addLine(dept,id,name,price,gst){const o=S.cur;const l=o.lines.find(x=>x.dept==dept&&x.id==id);l?l.qty++:o.lines.push({dept,id,name,price,gst:gst||0,qty:1,disc:0});render()}
 function scan(val){val=(val||'').trim();if(!val)return;
