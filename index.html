@@ -133,7 +133,7 @@ function custModal(o){const phone=normPhone(o.cust.phone);if(!phone)return alert
  const x=modal(h('h3',{},esc(c.name||'Customer')+' · '+phone),h('div',{},'Points: '+(c.points||0)+' · Store credit: '+inr(c.credit||0)),
   can('m')?h('div',{class:'row'},adjAmt,adjNote,h('button',{class:'sm',onclick:async()=>{const a=+adjAmt.value;if(!a)return;c.credit=r2((c.credit||0)+a);c.name=c.name||o.cust.name||'';await save('customer',c,phone);x();render()}},'Add credit')):null,
   h('h4',{},'Recent purchases'),...hist.map(hh=>h('div',{class:'row'},hh.no+' · '+new Date(hh.paidAt).toLocaleDateString(),inr(hh.t.total))),!hist.length?h('p',{},'No past purchases.'):null,
-  h('div',{class:'actions'},h('button',{onclick:x},'Close')))}
+  h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
  let redeemPts=0,changeVals={};const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
  const due=()=>r2(o.t.total-redeemPts-P.reduce((a,x)=>a+x.amt,0));
@@ -156,7 +156,7 @@ function pay(){const o=S.cur;if(!o.lines.length)return;o.t=tot(o);
   await persist();await adjustStock(o,-1);await applyLoyalty(o,cust,phone,redeemPts);x();prn(rcpt(o));S.cur=null;S.cartOpen=false;render()}},'Complete and print');
  const x=modal(h('h3',{},'Pay '+inr(o.t.total)),custRow,redeemRow,amt,h('label',{},useDenom,' Cash — count by denomination'),cdw,
   h('div',{class:'row'},...['cash','upi','card','credit'].map(m=>h('button',{onclick:()=>addPay(m)},m.toUpperCase()))),
-  list,info,changeSec,h('div',{class:'actions'},done,h('button',{onclick:x},'Cancel')));
+  list,info,changeSec,h('div',{class:'actions'},done,h('button',{onclick:()=>x()},'Cancel')));
  up()}
 async function adjustStock(o,sign){for(const l of o.lines){
  if(l.dept=='book'){const b=rec(l.id);if(b)await save('book',{...b,stock:Math.max(0,(b.stock||0)+sign*l.qty)},b.id)}
@@ -252,7 +252,7 @@ function expectedCash(openAt,openTotal){const paidSince=Object.values(R).filter(
  const expOut=r2(Object.values(R).filter(r=>r.kind=='exp'&&!r.deleted&&r.updated_at>=openAt).reduce((a,r)=>a+(r.data.amt||0),0));
  return r2(openTotal+cashIn-cashOut-expOut)}
 function denomModal(title,onSave){const dp=denomPicker(()=>{totEl.textContent=inr(dp.sum())});const totEl=h('b',{},inr(0));const note=h('input',{placeholder:'Note (optional)'});
- const x=modal(h('h3',{},title),dp.el,h('div',{class:'row'},'Total',totEl),note,h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{onSave(dp.vals,dp.sum(),note.value);x()}},'Save'),h('button',{onclick:x},'Cancel')))}
+ const x=modal(h('h3',{},title),dp.el,h('div',{class:'row'},'Total',totEl),note,h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{onSave(dp.vals,dp.sum(),note.value);x()}},'Save'),h('button',{onclick:()=>x()},'Cancel')))}
 V.shift=()=>{const open=shiftIsOpen(),last=lastShift(),hist=L('shift').sort((a,b)=>b.at>a.at?1:-1).slice(0,20);
  return h('div',{},h('div',{class:'card'},h('h3',{},'Shift / drawer'),h('p',{},open?'Shift open since '+new Date(last.at).toLocaleString()+' · Opening float '+inr(last.total):'No open shift.'),
   h('div',{class:'row'},!open?h('button',{class:'p',onclick:()=>denomModal('Opening float — count the till',async(denoms,total,note)=>{await save('shift',{type:'open',at:now(),by:S.user.id,denoms,total,note});render()})},'Open shift')
@@ -262,7 +262,7 @@ V.shift=()=>{const open=shiftIsOpen(),last=lastShift(),hist=L('shift').sort((a,b
 /* suppliers & purchase orders */
 function supForm(s){const f={name:h('input',{value:s.name||'',placeholder:'Name'}),phone:h('input',{value:s.phone||'',placeholder:'Phone'}),email:h('input',{value:s.email||'',placeholder:'Email'}),addr:h('input',{value:s.addr||'',placeholder:'Address'}),notes:h('input',{value:s.notes||'',placeholder:'Notes'})};
  const x=modal(h('h3',{},s.id?'Edit supplier':'New supplier'),f.name,f.phone,f.email,f.addr,f.notes,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim()},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:x},'Cancel')))}
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim()},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
 function supNameOf(id){const s=id&&rec(id);return s?s.name:''}
 function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id},s.name)));
  const items=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,cost:b.cost||0})),...L('stationery').map(s=>({dept:'stat',id:s.id,name:s.name,cost:s.cost||0}))];
@@ -271,7 +271,7 @@ function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'
  let lines=[];const linesEl=h('div');const refresh=()=>linesEl.replaceChildren(...lines.map((l,i)=>h('div',{class:'row'},l.name,l.qty+' @ '+inr(l.cost),h('button',{class:'sm',onclick:()=>{lines.splice(i,1);refresh()}},'x'))));
  const add=h('button',{onclick:()=>{if(!pick.value)return;const[dept,id]=pick.value.split(':');const it=items.find(x=>x.dept==dept&&x.id==id);if(!it||!(+qn.value>0))return;lines.push({dept,itemId:id,name:it.name,qty:+qn.value,cost:+cs.value||it.cost,received:0});refresh()}},'Add line');
  const x=modal(h('h3',{},'New purchase order'),supSel,h('div',{class:'row'},pick,qn,cs,add),linesEl,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),supplier:supSel.value||null,lines,status:'ordered',created:now(),by:S.user.id});x();render()}},'Create PO'),h('button',{onclick:x},'Cancel')))}
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),supplier:supSel.value||null,lines,status:'ordered',created:now(),by:S.user.id});x();render()}},'Create PO'),h('button',{onclick:()=>x()},'Cancel')))}
 function receiveLine(po,i,q){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
  const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=(it.stock||0)+q;it.cost=l.cost;save(kind,it,it.id)}
  l.received=(l.received||0)+q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':'partial';save('po',po,po.id).then(render)}
@@ -315,7 +315,7 @@ function importModal(dept){const inp=h('input',{type:'file',accept:'.csv'});cons
  inp.onchange=async()=>{const f=inp.files[0];if(!f)return;const text=await f.text();const rows=csvToObjs(text);parsed=matchImportRows(dept,rows);
   out.replaceChildren(h('p',{},parsed.toAdd.length+' to add, '+parsed.toUpdate.length+' to update, '+parsed.errors.length+' errors'),parsed.errors.length?h('div',{},...parsed.errors.slice(0,10).map(e=>h('div',{class:'hint'},e))):null)};
  const x=modal(h('h3',{},'Import CSV — '+DM[dept].label),h('p',{class:'hint'},dept=='book'?'Columns: title,author,publisher,isbn,category,cost_price,sell_price,stock,reorder_level':'Columns: name,category,price,cost_price,gst_percent,track_stock,stock,reorder_level'),
-  inp,out,h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!parsed||(!parsed.toAdd.length&&!parsed.toUpdate.length))return alert('Choose a CSV file first');await commitImport(dept,parsed);x();render()}},'Import'),h('button',{onclick:x},'Cancel')))}
+  inp,out,h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!parsed||(!parsed.toAdd.length&&!parsed.toUpdate.length))return alert('Choose a CSV file first');await commitImport(dept,parsed);x();render()}},'Import'),h('button',{onclick:()=>x()},'Cancel')))}
 /* item forms */
 function bookForm(b){const f={title:h('input',{value:b.title||'',placeholder:'Title'}),author:h('input',{value:b.author||'',placeholder:'Author'}),publisher:h('input',{value:b.publisher||'',placeholder:'Publisher'}),isbn:h('input',{value:b.isbn||'',placeholder:'ISBN / barcode'}),
   cat:h('select',{},...L('cat').filter(c=>c.dept=='book').map(c=>h('option',{value:c.id,selected:c.id==b.cat},c.name))),
@@ -363,7 +363,7 @@ V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l
  return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),h('button',{class:'p',onclick:async()=>{await save('set',{...s,...F},'settings');alert('Saved')}},'Save')),
  h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase orders.'),h('p',{},'Manager: discounts, voids, returns, purchase orders.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')))};
 function tabs(){const T=[['pos','Sell'],['orders','Orders'],['torders','Tables']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
-function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},n)),h('div',{class:'actions'},h('button',{onclick:x},'Close')))}
+function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reload()}
 function render(){const T=tabs();document.documentElement.style.setProperty('--accent',(DM[S.dept]||DM.book).accent);
  const header=h('header',{class:'top'},h('span',{class:'ttl'},cfg().name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
