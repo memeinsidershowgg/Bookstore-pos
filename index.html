@@ -192,13 +192,15 @@ async function shopifySyncItem(itemId,qtyDelta){const s=cfg();if(!s.shopifyDomai
 async function shopifySyncOrder(o){const s=cfg();if(!s.shopifyDomain||!s.shopifyToken)return;
  for(const l of o.lines)await shopifySyncItem(l.id,-l.qty)}
 const DENOMS=[{v:2000,rare:true},{v:500},{v:200},{v:100},{v:50},{v:20},{v:10},{v:5},{v:2},{v:1}];
-/* QR/barcode libs load lazily (not as blocking <script> tags) with a retry across two CDNs, since a
-   plain <script src> that fails once (slow/blocked network) left QRCode/JsBarcode undefined forever
-   with no way to recover -- that was "Table QR is not working". ensureLib loads on first real need
+/* QR/barcode libs are vendored locally (/vendor/*.min.js, same origin as the app) as the primary
+   source -- that's the real fix for "QR code library could not load": a shop on a restrictive mobile
+   network/DNS can block third-party CDN domains (jsdelivr, unpkg) outright even though the app's own
+   host loads fine, so no CDN retry logic could ever fully solve it. The CDN URLs stay as a fallback
+   only in case the vendored file is ever missing from a deployment. ensureLib loads on first real need
    (also kicked off eagerly, non-blocking, from boot()) and is safe to call repeatedly -- it caches the
    in-flight/settled promise so a second click while still loading just waits on the same attempt. */
-const LIB_URLS={qrcode:['https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js','https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'],
- jsbarcode:['https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js','https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js']};
+const LIB_URLS={qrcode:['/vendor/qrcode.min.js','https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js','https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'],
+ jsbarcode:['/vendor/jsbarcode.min.js','https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js','https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js']};
 const libPromise={};
 function loadScript(url){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=url;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 function ensureLib(name,globalName){if(typeof window[globalName]!='undefined')return Promise.resolve(true);
