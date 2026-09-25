@@ -284,11 +284,20 @@ async function persist(o){o=o||S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await sav
    document.write so layout has actually run before print() fires, and cleaning up on the browser's own
    `afterprint` event instead of a flat 3s timer that could remove the iframe (and its print job) out
    from under a slow print sheet -- with a long fallback timeout in case afterprint never fires. */
+/* print() MUST fire synchronously inside the click handler's own call stack -- iOS Safari (and most
+   mobile browsers) only allow the print sheet to open as a direct result of a user gesture, and ANY
+   deferral (setTimeout, requestAnimationFrame, an await) breaks that attribution and print() silently
+   no-ops with no error. An earlier version of this function wrapped the call in a double
+   requestAnimationFrame to "let iOS finish layout first" -- that was exactly backwards and is why
+   "Open invoice/slip"/"Print QR" stopped opening anything at all. Layout of a tiny 1x1 iframe with
+   simple HTML is effectively instant, so there's no real race to wait out; only the size fix (real
+   1x1 instead of 0x0, which iOS can refuse to print at all) and the afterprint-based cleanup remain. */
 function printHTML(css,html){const f=h('iframe',{style:'position:fixed;left:0;bottom:0;width:1px;height:1px;border:0;opacity:.01'});
  document.body.append(f);const d=f.contentDocument;d.open();d.write('<style>'+css+'</style>'+html);d.close();
  const cleanup=()=>{if(f.isConnected)f.remove()};
  f.contentWindow.onafterprint=cleanup;
- requestAnimationFrame(()=>requestAnimationFrame(()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){console.error('print',e);alert('Could not open the print dialog: '+e.message)}setTimeout(cleanup,60000)}))}
+ try{f.contentWindow.focus();f.contentWindow.print()}catch(e){console.error('print',e);alert('Could not open the print dialog: '+e.message)}
+ setTimeout(cleanup,60000)}
 function prn(html){printHTML('body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}',html)}
 function prnA4(html){printHTML('@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}',html)}
 function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')+(o.type=='return'&&p.m=='cash'&&o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':'')).join(', ');
@@ -363,22 +372,25 @@ function invoiceCreatedPopup(o){const link=invLink(o);
    h('button',{onclick:async()=>{try{await navigator.clipboard.writeText(link);alert('Link copied')}catch{prompt('Copy this link',link)}}},'Copy link'),
    h('button',{onclick:()=>x()},'Done')))}
 function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
-/* QR/barcode generation depends on the qrcode/jsbarcode CDN scripts loaded in <head>. If either script
-   fails to load (offline first paint, a blocked/slow CDN, a strict network) the global (QRCode /
-   JsBarcode) is simply undefined and calling it threw an uncaught ReferenceError from inside a plain
-   onclick — nothing printed and nothing visible happened, which is exactly what showed up as
-   "Table QR is not working". Both entry points now check the global first and show a clear, actionable
-   alert instead of failing silently, and printTableQR also catches any error QRCode.toCanvas itself
-   raises (e.g. an oversized/invalid payload) so the failure is always visible to staff. */
-async function printBarcode(code,title){if(!await ensureLib('jsbarcode','JsBarcode'))return alert('Barcode library could not load — check your internet connection and try again.');
- try{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
- catch(e){console.error('printBarcode',e);alert('Could not generate the barcode: '+e.message)}}
+/* QR/barcode generation depends on the qrcode/jsbarcode libraries (vendored locally, see ensureLib).
+   printBarcode/printTableQR stay synchronous whenever the library is already loaded (the normal case --
+   boot() preloads both eagerly) and call prn()/print() in the SAME tick as the click, because any
+   `await` before print() breaks iOS Safari's user-gesture attribution and the print sheet silently
+   never opens -- that's exactly what showed up as "Print QR ... not even opening". The async/await
+   path only runs as a rare fallback if the library genuinely isn't ready yet, which loses the gesture
+   on iOS but is still strictly better than throwing a ReferenceError with nothing visible at all. */
+function printBarcode(code,title){const go=()=>{try{const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');JsBarcode(svg,code,{format:'CODE128',width:2,height:40,displayValue:true,fontSize:12,margin:4});prn(`<div style="width:50mm;text-align:center"><div style="font:11px sans-serif">${esc(title||'')}</div>${svg.outerHTML}</div>`)}
+  catch(e){console.error('printBarcode',e);alert('Could not generate the barcode: '+e.message)}};
+ if(typeof JsBarcode!='undefined')return go();
+ ensureLib('jsbarcode','JsBarcode').then(ok=>ok?go():alert('Barcode library could not load — check your internet connection and try again.'))}
 function tableQRUrl(t){return location.origin+'/?order=1&t='+encodeURIComponent(t.id)+'&tn='+encodeURIComponent(t.name)}
-async function printTableQR(t){if(!await ensureLib('qrcode','QRCode'))return alert('QR code library could not load — check your internet connection and try again.');
- const url=tableQRUrl(t),cv=document.createElement('canvas');
- try{QRCode.toCanvas(cv,url,{width:200,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
-  prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
- catch(e){console.error('printTableQR',e);alert('Could not generate the QR code: '+e.message)}}
+function printTableQR(t){const url=tableQRUrl(t);
+ const go=()=>{const cv=document.createElement('canvas');
+  try{QRCode.toCanvas(cv,url,{width:200,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
+   prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
+  catch(e){console.error('printTableQR',e);alert('Could not generate the QR code: '+e.message)}};
+ if(typeof QRCode!='undefined')return go();
+ ensureLib('qrcode','QRCode').then(ok=>ok?go():alert('QR code library could not load — check your internet connection and try again.'))}
 /* selling */
 /* addLine/qty take an explicit order (o) so the same cart logic serves both the Sell cart (S.cur,
    books+stationery) and the separate Orders/cafe cart (S.curCafe) -- two independent bills, per the
