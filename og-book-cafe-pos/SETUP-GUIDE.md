@@ -2,21 +2,19 @@
 Everything runs on **your own** accounts (Supabase for the database, Vercel for hosting). Nothing is tied to the developer or any third-party AI account. Allow about 30 minutes.
 
 ## What you need
-- A Supabase account (supabase.com) and a Vercel account (vercel.com), both signed up with **your** email
+- A Vercel account (vercel.com) to host the app. Nothing is tied to the developer or any third-party AI account.
 - A computer with Node.js installed (only for deploying), plus Chrome on the till tablet or PC
 - Optional: a thermal receipt printer (80mm) and your own domain
 
-## 1. Create the database
-1. Supabase: New project. Pick the region closest to you and save the database password.
-2. Open **SQL Editor > New query**, paste all of `supabase/schema.sql`, click **Run**.
+## 1. Database (already set up)
+A Supabase project called **og-book-cafe-pos** has already been created and `supabase/schema.sql` has already been run against it. `config.js` in this folder is already filled in with that project's URL and anon key — you only need to log in to https://supabase.com to manage it (ask whoever provisioned it to add you as a member, or transfer ownership to your own account when convenient).
 
 ## 2. Create the owner login
-1. **Authentication > Users > Add user > Create new user**. Enter your email and password and tick **Auto confirm user**. The first user created is the **owner**.
+1. In the Supabase dashboard for **og-book-cafe-pos**: **Authentication > Users > Add user > Create new user**. Enter your email and password and tick **Auto confirm user**. The first user created is the **owner**.
 2. **Authentication > Sign In / Providers**: turn **OFF** "Allow new users to sign up". This stops strangers creating accounts.
 
 ## 3. Connect the app to your database
-1. **Project Settings > API**. Copy the Project URL and the anon / publishable key.
-2. Open `config.js` in a text editor and replace the two placeholder values. Save.
+Already done — `config.js` in this folder points at the `og-book-cafe-pos` Supabase project. Only revisit this if you move to your own Supabase project later (**Project Settings > API** for the URL and anon/publishable key).
 
 ## 4. Put it online
 In a terminal, inside this folder:
