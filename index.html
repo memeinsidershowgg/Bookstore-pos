@@ -66,6 +66,22 @@ body{padding-bottom:56px}
 .md{background:#fff;border-radius:18px 18px 0 0;padding:14px;width:100%;max-width:540px;max-height:92vh;overflow:auto;display:grid;gap:7px;box-shadow:var(--sh-lg);animation:md-in .22s var(--ease)}
 @media(min-width:620px){.md{border-radius:18px}}
 .md .actions{position:sticky;bottom:-14px;background:#fff;margin:6px -14px -14px;padding:8px 14px;border-top:1px solid var(--line);display:flex;gap:6px;flex-wrap:wrap}
+.print-modal-bar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.print-modal-bar h3{margin:0}
+.print-frame{width:100%;height:60vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+.qr-pop{text-align:center;display:grid;gap:10px}
+.qr-pop img{margin:0 auto;border-radius:10px;border:1px solid var(--line);padding:8px;background:#fff}
+.menu-sec{margin:18px 0}
+.menu-sec h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);border-bottom:1px solid var(--line);padding-bottom:6px}
+.menu-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.menu-item:last-child{border-bottom:0}
+.mi-info b{font-size:14px}
+.mi-info .hint{margin-top:2px;max-width:60vw}
+.mi-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.mi-side .price{font-weight:700}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper b{min-width:16px;text-align:center}
+.pub-cartbar{position:fixed;left:12px;right:12px;bottom:12px;background:var(--accent);color:#fff;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--sh-lg);z-index:20;font-weight:600}
 .cartsheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-sm)}
 @media(max-width:840px){
  .cartsheet{position:fixed;left:0;right:0;bottom:56px;transform:translateY(calc(100% - 48px));transition:transform .22s ease;max-height:82vh;overflow:auto;border-radius:14px 14px 0 0;box-shadow:0 -6px 24px #00000022;z-index:11;border-bottom:none}
@@ -210,7 +226,10 @@ const normPhone=p=>(p||'').replace(/\D/g,'');
 /* expense categories: fixed set per the reference architecture doc, so reports can be grouped */
 const EXP_CATS=['Electricity','Internet','Rent','Salaries','Packaging','Transport','Repairs','Stationery','Cleaning','Marketing','Maintenance','Other'];
 /* co-reading membership plans: monthly hour-bundles, sold like an item but tracked as a time balance */
-const MEMBER_PLANS=[{id:'p30',label:'30 hrs / month',price:999,hours:30},{id:'p60',label:'60 hrs / month',price:1499,hours:60},{id:'p90',label:'90 hrs / month',price:1999,hours:90}];
+const MEMBER_PLANS=[
+ {id:'p30',label:'Gold',sub:'30 hrs/month · General books · Free WiFi',price:999,hours:30},
+ {id:'p60',label:'Platinum',sub:'60 hrs/month · General books · Free WiFi',price:1499,hours:60},
+ {id:'p90',label:'Diamond',sub:'90 hrs/month · General + academic books · Free WiFi',price:1999,hours:90}];
 /* book rental deposit refund tiers -- returned sooner keeps a bigger share of the deposit.
    Beyond 2 months (or never returned) we treat the book as forfeited/sold: refund 0%, so the
    store isn't left holding an open liability forever; staff can always override with a manual
@@ -277,21 +296,21 @@ function nextNo(){const n=(+localStorage.n||0)+1;localStorage.n=n;const dv=local
 const newOrder=()=>({id:uid(),lines:[],status:'cart',type:'sale',created:now(),by:S.user.id,cust:{}});
 async function persist(o){o=o||S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await save('order',o,o.id)}
 /* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels.
-   iOS Safari cannot window.print() a hidden/offscreen iframe at all when the app is running
-   "standalone" (added to the home screen) -- there's no browser chrome in that mode to host a
-   print sheet, so print() just silently no-ops with zero error, no matter how the iframe is timed
-   or sized. That matched every "Open invoice/slip"/"Print QR" report exactly. The fix is to route
-   around standalone mode entirely: window.open() a real new tab (which on iOS breaks out into
-   full Safari, chrome and all) and print from inside that tab's own load event.
-   window.open(), like print(), MUST fire synchronously inside the click handler's own call stack --
-   any deferral (setTimeout/rAF/await) before it loses user-gesture attribution and gets silently
-   blocked as a popup. So printHTML() itself stays a plain synchronous call. */
+   Two earlier approaches both failed on the owner's real iOS device: a hidden 1x1 iframe printed
+   in-place (silent no-op, no error), and window.open()-ing a real Safari tab (silently blocked as a
+   popup, or left the tab open with no obvious way back into the app). Both also gave the cashier no
+   visible "did this work?" feedback and no close/back control if it didn't.
+   This version never leaves the app or opens a new window at all: it shows an in-page overlay with
+   a live preview (a same-page iframe, not hidden) plus explicit "Print" and "Close" buttons. Print
+   is wired to the iframe's own contentWindow.print(), fired synchronously from the Print button's
+   click -- a fresh, real user gesture every time, which is what iOS actually requires; it does not
+   depend on timing relative to the button that opened the preview. Close always works because it's
+   just removing a DOM node, never a window.close() call iOS can refuse. */
 function printHTML(css,html){
- const w=window.open('','_blank');
- if(!w){alert('Could not open the print window. If this app is installed on your home screen, allow pop-ups for it in Settings, or open it in Safari instead.');return}
- w.document.open();
- w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'<script>window.onload=function(){window.focus();window.print()};window.onafterprint=function(){try{window.close()}catch(e){}}<\/script></body></html>');
- w.document.close()}
+ const f=h('iframe',{class:'print-frame'});
+ const doPrint=()=>{try{f.contentWindow.focus();f.contentWindow.print()}catch(e){console.error('print',e);alert('Could not open the print dialog: '+e.message)}};
+ const x=modal(h('div',{class:'print-modal-bar'},h('h3',{},'Preview'),h('div',{class:'actions',style:'position:static;background:none;border:0;margin:0;padding:0'},h('button',{class:'p',onclick:doPrint},'Print'),h('button',{onclick:()=>x()},'Close'))),f);
+ const d=f.contentDocument;d.open();d.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'</body></html>');d.close()}
 function prn(html){printHTML('body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}',html)}
 function prnA4(html){printHTML('@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}',html)}
 function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')+(o.type=='return'&&p.m=='cash'&&o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':'')).join(', ');
@@ -378,10 +397,18 @@ function printBarcode(code,title){const go=()=>{try{const svg=document.createEle
  if(typeof JsBarcode!='undefined')return go();
  ensureLib('jsbarcode','JsBarcode').then(ok=>ok?go():alert('Barcode library could not load — check your internet connection and try again.'))}
 function tableQRUrl(t){return location.origin+'/?order=1&t='+encodeURIComponent(t.id)+'&tn='+encodeURIComponent(t.name)}
+/* Tapping "Print QR" shows the code full-size right in the app so a customer can scan it straight off
+   the screen -- no print step needed at all for the common case. "Print" is still offered inside the
+   popup for a physical table-tent copy, going through the same in-page print preview as everything
+   else (see printHTML above). */
 function printTableQR(t){const url=tableQRUrl(t);
  const go=()=>{const cv=document.createElement('canvas');
-  try{QRCode.toCanvas(cv,url,{width:200,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
-   prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
+  try{QRCode.toCanvas(cv,url,{width:280,margin:1},err=>{if(err){console.error('printTableQR',err);return alert('Could not generate the QR code: '+err.message)}
+   const data=cv.toDataURL();
+   const x=modal(h('div',{class:'qr-pop'},h('h3',{},t.name),h('img',{src:data,width:240,height:240}),h('div',{class:'hint'},'Ask the customer to scan this to order.'),
+    h('div',{class:'actions',style:'position:static;background:none;border:0;margin:0;padding:0;justify-content:center'},
+     h('button',{class:'p',onclick:()=>{x();prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${data}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)}},'Print'),
+     h('button',{onclick:()=>x()},'Close'))))})}
   catch(e){console.error('printTableQR',e);alert('Could not generate the QR code: '+e.message)}};
  if(typeof QRCode!='undefined')return go();
  ensureLib('qrcode','QRCode').then(ok=>ok?go():alert('QR code library could not load — check your internet connection and try again.'))}
@@ -571,7 +598,7 @@ V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').t
   h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search cafe menu',value:S.qCafe||'','data-focus-key':'qCafe',oninput:e=>{S.qCafe=e.target.value;render()}})),
   h('div',{class:'row'},h('button',{class:'sm',onclick:cafeCustomItemModal},'+ Custom item')),
   h('div',{class:'items'},...results.map(it=>{const tracked=it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;
-   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine('cafe',it.id,it.name,it.price,it.gst||0,oc)},h('b',{},it.name),h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
+   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine('cafe',it.id,it.name,it.price,it.gst||0,oc)},h('b',{},it.name),it.desc?h('small',{class:'hint'},it.desc):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
   results.length?null:h('p',{},'No cafe items match.'));
  const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),oc.no?h('small',{},oc.no):null),
   ...oc.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1,oc)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1,oc)},'+')),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
@@ -850,7 +877,7 @@ V.rentals=()=>{const open=L('rental').filter(r=>r.status=='open').sort((a,b)=>a.
 function activeMembership(phone){return L('membership').filter(m=>normPhone(m.phone)==phone).sort((a,b)=>b.purchasedAt>a.purchasedAt?1:-1)[0]}
 /* Membership payment now always counts by denomination (same "track all notes and coins live" change
    as Sell) and validates the cash counted actually covers the plan price before accepting it. */
-function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h('option',{value:p.id},p.label+' — '+inr(p.price))));
+function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h('option',{value:p.id},p.label+' ('+p.hours+' hrs/month) — '+inr(p.price))));
  const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
  const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
  const dp=denomPicker(()=>{});const cdw=h('div',{},h('p',{class:'hint'},'Cash tendered — count notes/coins:'),dp.el);
@@ -865,7 +892,7 @@ function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h(
 V.membership=()=>{const phones=[...new Set(L('membership').map(m=>normPhone(m.phone)))];
  const activeMembers=phones.map(p=>activeMembership(p)).filter(m=>m&&m.status=='active'&&m.expiresAt>now()).sort((a,b)=>a.name.localeCompare(b.name));
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Co-reading membership'),h('button',{class:'p sm',onclick:buyMembershipModal},'Sell / renew membership')),
-   ...MEMBER_PLANS.map(p=>h('div',{class:'row'},p.label,inr(p.price))),
+   ...MEMBER_PLANS.map(p=>h('div',{class:'row'},h('span',{},h('b',{},p.label),h('div',{class:'hint'},p.sub)),h('b',{},inr(p.price)))),
    h('p',{class:'hint'},'Check-in / check-out is tracked via Petpooja Attendo, not here.')),
   h('div',{class:'card'},h('h3',{},'Active members ('+activeMembers.length+')'),
    ...activeMembers.map(m=>{const plan=(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label||m.plan,remaining=r2((m.hoursTotal||0)-(m.hoursUsed||0)),c=rec(m.phone);
@@ -961,14 +988,16 @@ function stockForm(dept,it){const kind=DEPT_KIND[dept];
   price:h('input',{type:'number',value:it.price??'',placeholder:'Price (incl. GST)'}),cost:h('input',{type:'number',value:it.cost??'',placeholder:'Cost price (optional, for margin reports)'}),gst:h('input',{type:'number',value:it.gst??DM[dept].gst,placeholder:'GST % (already included in price)'}),
   track:dept=='cafe'?h('input',{type:'checkbox',checked:it.track}):null,sku:dept=='stat'?h('input',{value:it.sku||'',placeholder:'SKU / barcode'}):null,
   mrp:dept=='stat'?h('input',{type:'number',value:it.mrp??'',placeholder:'MRP (printed price, optional)'}):null,unit:h('input',{value:it.unit||'pcs',placeholder:'Unit (e.g. pcs)'}),
+  desc:dept=='cafe'?h('input',{value:it.desc||'',placeholder:'Short description (shown on the menu, optional)'}):null,
   stock:h('input',{type:'number',value:it.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:it.reorder??5,placeholder:'Reorder threshold'}),hsn:h('input',{value:it.hsn||'',placeholder:'HSN code (optional)'}),
   shopifyInventoryItemId:h('input',{value:it.shopifyInventoryItemId||'',placeholder:'Shopify Inventory Item ID (optional)'})};
  const genBtn=dept=='stat'?h('button',{class:'sm',onclick:()=>{f.sku.value=genCode('ST')}},'Generate barcode'):null;
  const x=modal(h('h3',{},it.id?'Edit '+DM[dept].label+' item':'New '+DM[dept].label+' item'),
-  f.name,f.cat,f.price,f.cost,f.gst,dept=='stat'?f.mrp:null,f.unit,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,f.stock,f.reorder,f.hsn,f.shopifyInventoryItemId,
+  f.name,f.cat,f.price,f.cost,f.gst,dept=='stat'?f.mrp:null,f.unit,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='cafe'?f.desc:null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,f.stock,f.reorder,f.hsn,f.shopifyInventoryItemId,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value||!f.cat.value||!(+f.price.value>0))return alert('Name, category and price are needed.');
    if(it.id&&(it.stock!=+f.stock.value||it.price!=+f.price.value))await audit('edit_'+kind,f.name.value+' stock '+(it.stock??0)+'->'+f.stock.value+' price '+(it.price??0)+'->'+f.price.value);
    const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,hsn:f.hsn.value.trim(),shopifyInventoryItemId:f.shopifyInventoryItemId.value.trim()};
+   if(dept=='cafe')data.desc=f.desc.value.trim();
    if(dept=='stat'){data.sku=f.sku.value.trim();data.mrp=f.mrp.value===''?null:+f.mrp.value}
    await save(kind,data,it.id);x();render()}},'Save'),
    dept=='stat'?h('button',{onclick:()=>{if(!f.sku.value)return alert('Enter or generate a barcode first');printBarcode(f.sku.value,f.name.value)}},'Print barcode'):null,
@@ -1087,22 +1116,38 @@ async function bootPublic(t,tn){PUB.table=t;PUB.tableName=tn||('Table');$('#app'
  if(error){$('#app').textContent='Could not load the menu. Check your connection and try again.';return}
  PUB.items=data.filter(r=>r.kind=='cafeitem').map(r=>r.data);PUB.cats=data.filter(r=>r.kind=='cat'&&r.data.dept=='cafe').map(r=>r.data).sort((a,b)=>a.n-b.n);PUB.settings=(data.find(r=>r.kind=='settings')||{}).data||{};
  if(!PUB.cat)PUB.cat=PUB.cats[0]&&PUB.cats[0].id;renderPublic()}
-function pubAdd(it){const l=PUB.cart.find(x=>x.id==it.id);l?l.qty++:PUB.cart.push({id:it.id,name:it.name,price:it.price,qty:1});renderPublic()}
-function pubQty(l,d){l.qty+=d;if(l.qty<=0)PUB.cart=PUB.cart.filter(x=>x!==l);renderPublic()}
+function pubQtyFor(it){const l=PUB.cart.find(x=>x.id==it.id);return l?l.qty:0}
+function pubSet(it,q){q=Math.max(0,Math.trunc(q));const l=PUB.cart.find(x=>x.id==it.id);
+ if(q<=0){if(l)PUB.cart=PUB.cart.filter(x=>x!==l)}else if(l)l.qty=q;else PUB.cart.push({id:it.id,name:it.name,price:it.price,qty:q});
+ renderPublic()}
 async function pubSubmit(){if(!PUB.cart.length)return;
  const{error}=await sb.from('records').insert({id:uid(),kind:'torder',data:{table:PUB.table,tableName:PUB.tableName,lines:PUB.cart,status:'pending',created:now(),note:PUB.note||''},deleted:false});
  if(error){alert('Could not send the order — check your connection and try again.');return}
  PUB.cart=[];PUB.note='';renderPublic();alert('Order sent to the counter! You can keep adding items.')}
-function renderPublic(){const q=PUB.q.trim().toLowerCase();const items=PUB.items.filter(i=>q?i.name.toLowerCase().includes(q):i.cat==PUB.cat).sort((a,b)=>a.name.localeCompare(b.name));const total=r2(PUB.cart.reduce((a,l)=>a+l.price*l.qty,0));
- const menu=h('div',{class:'wrap'},
-  h('div',{class:'row'},...PUB.cats.map(c=>h('button',{class:((c.id==PUB.cat&&!q)?'on sm':'sm')+' pill',onclick:()=>{PUB.cat=c.id;PUB.q='';renderPublic()}},c.name))),
+/* Laid out like the printed physical menu the owner shared: every category shown at once as its own
+   section (name + short description + price), with quick-jump pills up top instead of a single-category
+   filter -- searching collapses this into one flat matching list instead. */
+function pubItemRow(it){const qn=pubQtyFor(it);
+ return h('div',{class:'menu-item'},
+  h('div',{class:'mi-info'},h('b',{},it.name),it.desc?h('div',{class:'hint'},it.desc):null),
+  h('div',{class:'mi-side'},h('span',{class:'price'},inr(it.price)),
+   qn?h('span',{class:'stepper'},h('button',{class:'sm',onclick:()=>pubSet(it,qn-1)},'−'),h('b',{},qn),h('button',{class:'sm',onclick:()=>pubSet(it,qn+1)},'+')):
+    h('button',{class:'sm p',onclick:()=>pubSet(it,1)},'Add')))}
+function renderPublic(){const q=PUB.q.trim().toLowerCase();const total=r2(PUB.cart.reduce((a,l)=>a+l.price*l.qty,0)),count=PUB.cart.reduce((a,l)=>a+l.qty,0);
+ const body=q?
+  h('div',{class:'menu-sec'},...PUB.items.filter(i=>i.name.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name)).map(pubItemRow)):
+  h('div',{},...PUB.cats.map(c=>{const items=PUB.items.filter(i=>i.cat==c.id).sort((a,b)=>a.name.localeCompare(b.name));if(!items.length)return null;
+   return h('div',{class:'menu-sec',id:'sec-'+c.id},h('h3',{},c.name),...items.map(pubItemRow))}));
+ const menu=h('div',{class:'wrap',style:'padding-bottom:80px'},
+  h('div',{class:'row'},...PUB.cats.map(c=>h('button',{class:'sm pill',onclick:()=>{PUB.q='';renderPublic();setTimeout(()=>{const el=document.getElementById('sec-'+c.id);el&&el.scrollIntoView({behavior:'smooth',block:'start'})},30)}},c.name))),
   h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search menu',value:PUB.q,oninput:e=>{PUB.q=e.target.value;renderPublic()}})),
-  h('div',{class:'items'},...items.map(it=>h('button',{onclick:()=>pubAdd(it)},h('b',{},it.name),h('span',{class:'price'},inr(it.price))))),items.length?null:h('p',{},'Nothing here yet.'),
-  h('div',{class:'card'},h('h3',{},'Your order'),...PUB.cart.map(l=>h('div',{class:'row'},l.name,h('span',{},h('button',{class:'sm',onclick:()=>pubQty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>pubQty(l,1)},'+')),inr(l.price*l.qty))),
-   PUB.cart.length?null:h('p',{class:'empty-hint'},'Tap an item to add it.'),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(total))),
-   h('input',{placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
-   h('button',{class:'p cta',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
- $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu)}
+  body,!q&&!PUB.cats.length?h('p',{},'Nothing on the menu yet.'):null,
+  h('div',{class:'card'},h('h3',{},'Your order'),...PUB.cart.map(l=>h('div',{class:'row'},l.name,h('span',{},h('button',{class:'sm',onclick:()=>pubSet(l,l.qty-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>pubSet(l,l.qty+1)},'+')),inr(l.price*l.qty))),
+   PUB.cart.length?null:h('p',{class:'empty-hint'},'Tap "Add" on any item to build your order.'),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(total))),
+   h('input',{style:'width:100%;box-sizing:border-box',placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
+   h('button',{class:'p cta',style:'width:100%',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
+ $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu,
+  count?h('div',{class:'pub-cartbar',onclick:()=>{const c=document.querySelector('.card');c&&c.scrollIntoView({behavior:'smooth',block:'start'})}},h('span',{},count+' item'+(count>1?'s':'')+' in your order'),h('b',{},inr(total))):null)}
 /* public, no-login printable invoice: index.html?i=<shortCode> (or, for orders saved before short
    codes existed, ?inv=<orderId>) -- reached via the WhatsApp bill-share link. Anonymous, scoped to
    exactly one order (an unguessable code/UUID -- the same "anyone with the link" trust model as a
