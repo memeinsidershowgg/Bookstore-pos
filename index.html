@@ -1,7 +1,10 @@
 <!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Bookstore POS</title><link rel=manifest href=/manifest.json><link rel=icon href=/icon.svg><meta name=theme-color content=#161616>
 <style>
-:root{--book:#3a3a3a;--cafe:#4a4a4a;--stat:#2a2a2a;--accent:#141414;--accent2:#3a3a3a;--rail:#0d0d0d;--bg:#f4f4f3;--card:#fff;--ink:#17171a;--sub:#6b6b70;--line:#e4e4e1;--r:14px;
- --sh-sm:0 1px 2px #00000010,0 1px 1px #0000000a;--sh-md:0 4px 16px #00000014,0 1px 2px #0000000f;--sh-lg:0 12px 32px #0000001f,0 2px 6px #00000012;--ease:cubic-bezier(.2,.7,.3,1)}
+:root{--book:#3a3a3a;--cafe:#4a4a4a;--stat:#2a2a2a;--accent:#141414;--accent2:#3a3a3a;--rail:#0d0d0d;--bg:#f5f5f3;--card:#fff;--ink:#17171a;--sub:#6b6b70;--line:#e7e7e3;--r:16px;
+ --sh-sm:0 1px 3px #00000009,0 1px 1px #00000006;--sh-md:0 6px 20px #00000012,0 1px 2px #0000000d;--sh-lg:0 16px 40px #0000001c,0 2px 6px #00000010;--ease:cubic-bezier(.2,.7,.3,1);
+ --ok:#1e8e5a;--ok-bg:#e8f5ee;--warn:#b8790a;--warn-bg:#fdf1e0;--danger:#b3261e;--danger-bg:#fdecea}
+/* Status colour system: used only for at-a-glance state (paid/pending/void/low-stock/active), never as
+   decoration -- the rest of the UI stays the black/white/grey "premium minimal" look asked for earlier. */
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 h3{margin:0;font-size:15.5px;font-weight:700;letter-spacing:-.01em}
@@ -29,6 +32,7 @@ label{display:flex;align-items:center;gap:5px;font-size:12px}
 .ico svg{display:block;width:100%;height:100%}
 header.top{display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;position:sticky;top:0;z-index:6;box-shadow:var(--sh-sm)}
 header.top .ttl{font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top .hdr-logo{height:26px;width:auto;max-width:100px;object-fit:contain;border-radius:5px;background:#fff;padding:2px 4px}
 header.top .stat{margin-left:auto;font-size:11px;opacity:.9;white-space:nowrap}
 header.top button{background:#ffffff22;color:#fff;border-color:#ffffff44;min-height:30px;padding:5px 9px;font-size:12px}
 nav.rail{display:none}
@@ -82,7 +86,14 @@ body{padding-bottom:56px}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper b{min-width:16px;text-align:center}
 .pub-cartbar{position:fixed;left:12px;right:12px;bottom:12px;background:var(--accent);color:#fff;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--sh-lg);z-index:20;font-weight:600}
-.ticket{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:8px 0;background:#fff}
+.ticket{border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:10px;padding:10px 12px;margin:8px 0;background:#fff}
+details.sec{margin-bottom:8px}
+details.sec>summary{cursor:pointer;font-weight:700;font-size:13.5px;padding:4px 0;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::after{content:'▾';color:var(--sub);transition:transform .18s var(--ease);font-size:11px}
+details.sec[open]>summary::after{transform:rotate(180deg)}
+details.sec>summary:hover{color:var(--accent2)}
+details.sec .sec-body{padding-top:8px;display:grid;gap:8px}
 .cartsheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-sm)}
 @media(max-width:840px){
  .cartsheet{position:fixed;left:0;right:0;bottom:56px;transform:translateY(calc(100% - 48px));transition:transform .22s ease;max-height:82vh;overflow:auto;border-radius:14px 14px 0 0;box-shadow:0 -6px 24px #00000022;z-index:11;border-bottom:none}
@@ -108,9 +119,11 @@ th{font-size:11px;color:var(--sub);font-weight:600}
  table.rtable.t2 td.p2{display:block;color:var(--sub);font-size:12px;padding:0 0 2px}
  table.rtable.t2 td.p1::before,table.rtable.t2 td.p2::before{content:none}
 }
-small{color:var(--sub)}.low{color:#b3261e;font-weight:700}.oos{opacity:.45}
-.tag{font-size:10px;background:#eef0e8;border-radius:6px;padding:1px 6px}
+small{color:var(--sub)}.low{color:var(--danger);font-weight:700}.oos{opacity:.45}
+.tag{font-size:10px;background:#eef0e8;border-radius:6px;padding:1px 6px;font-weight:600}
 .tag-book{background:#e9e9e9;color:#2a2a2a}.tag-cafe{background:#f0f0f0;color:#3a3a3a}.tag-stat{background:#e4e4e4;color:#232323}.tag-custom{background:#ececec;color:#1a1a1a}.tag-addon{background:#eee;color:#555}
+.tag.low{background:var(--danger-bg);color:var(--danger)}
+.tag-paid{background:var(--ok-bg);color:var(--ok)}.tag-pending{background:var(--warn-bg);color:var(--warn)}.tag-void,.tag-oos{background:var(--danger-bg);color:var(--danger)}.tag-held{background:#eef0f6;color:#3a4a6b}.tag-active{background:var(--ok-bg);color:var(--ok)}
 .hint{font-size:11px;color:var(--sub)}
 .empty-hint{text-align:center;color:var(--sub);padding:20px 10px;font-size:13px}
 .denoms{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:5px}
@@ -386,6 +399,22 @@ function invoiceCreatedPopup(o){const link=invLink(o);
    h('button',{onclick:async()=>{try{await navigator.clipboard.writeText(link);alert('Link copied')}catch{prompt('Copy this link',link)}}},'Copy link'),
    h('button',{onclick:()=>x()},'Done')))}
 function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
+/* Logo upload (Settings > Invoice template): resized client-side to a small PNG data URL and stored
+   directly in settings, so it works everywhere invLogoUrl is already used (<img src>, print previews)
+   with no file storage/bucket setup needed -- just a normal image picker instead of pasting a URL. */
+function resizeImageFile(file,maxW,maxH){return new Promise((resolve,reject)=>{
+ const fr=new FileReader();
+ fr.onload=()=>{const img=new Image();
+  img.onload=()=>{const ratio=Math.min(1,maxW/img.width,maxH/img.height);
+   const w=Math.max(1,Math.round(img.width*ratio)),h=Math.max(1,Math.round(img.height*ratio));
+   const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+   cv.getContext('2d').drawImage(img,0,0,w,h);resolve(cv.toDataURL('image/png'))};
+  img.onerror=()=>reject(new Error('Could not read that image'));img.src=fr.result};
+ fr.onerror=()=>reject(new Error('Could not read that file'));fr.readAsDataURL(file)})}
+/* Collapsible section shell (native <details>) used across the admin-heavy tabs (Settings, Inventory,
+   Reports, Staff) so a long stack of cards doesn't have to be scrolled past to reach one at the
+   bottom -- open by default only for the section most likely needed right away. */
+function sec(title,open,...body){return h('details',{class:'sec',open:!!open},h('summary',{},title),h('div',{class:'sec-body'},...body))}
 /* QR/barcode generation depends on the qrcode/jsbarcode libraries (vendored locally, see ensureLib).
    printBarcode/printTableQR stay synchronous whenever the library is already loaded (the normal case --
    boot() preloads both eagerly) and call prn()/print() in the SAME tick as the click, because any
@@ -637,7 +666,7 @@ V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').t
   h('div',{style:'margin-top:4px'},...o.lines.map(l=>h('div',{},l.qty+'x '+esc(l.name)))),
   o.note?h('div',{class:'hint'},'Note: '+esc(o.note)):null,
   h('div',{class:'row',style:'margin-top:8px;gap:6px'},h('button',{class:'p sm',onclick:()=>loadTorder(o)},'Accept · Load into cart'),h('button',{class:'sm',onclick:()=>{if(confirm('Reject this order?'))rejectTorder(o)}},'Reject')));
- const tableOrdersCard=h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Table orders'),pend.length?h('span',{class:'tag low'},pend.length+' new'):null),
+ const tableOrdersCard=h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Table orders'),pend.length?h('span',{class:'tag tag-pending'},pend.length+' new'):null),
   h('p',{class:'hint'},'From customers who scanned a table QR code. Accept to load into the cafe cart, or reject.'),
   Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{style:'margin:10px 0'},h('h4',{style:'margin:0 0 4px'},esc(os[0].tableName||('Table '+tid))),...os.map(ticket))):h('p',{class:'empty-hint'},'No pending table orders.'));
  const tables=L('table');
@@ -645,7 +674,7 @@ V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').t
   ...tables.map(tb=>h('div',{class:'row'},tb.name,h('span',{},h('button',{class:'sm',onclick:()=>printTableQR(tb)},'Print QR'),h('button',{class:'sm',onclick:()=>confirm('Delete table?')&&save('table',tb,tb.id,true).then(render)},'Delete')))));
  const cafeOrders=L('order').filter(o=>o.t&&o.lines.length&&o.lines.every(l=>l.dept=='cafe')).sort((a,b)=>b.created>a.created?1:-1);
  const held=cafeOrders.filter(o=>o.status=='held');
- const recentCard=h('div',{class:'card'},h('h3',{},'Recent cafe bills'),...cafeOrders.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},o.no+(o.status=='void'?' (void)':'')+(o.type=='return'?' (return)':''),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null))));
+ const recentCard=h('div',{class:'card'},h('h3',{},'Recent cafe bills'),...cafeOrders.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},h('span',{},o.no+(o.type=='return'?' (return)':''),' ',h('span',{class:'tag '+(o.status=='void'?'tag-void':'tag-paid')},o.status=='void'?'Void':'Paid')),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null))));
  return h('div',{},h('div',{class:'g'},browse,cartSheet),
   held.length?h('div',{class:'card'},h('h3',{},'Held cafe sales ('+held.length+')'),...held.map(o=>h('div',{class:'row'},o.no+' · '+(o.cust.name||'walk-in'),h('b',{},inr(o.t.total)),h('button',{class:'p sm',onclick:()=>{S.curCafe=structuredClone(o);render()}},'Resume')))):null,
   tableOrdersCard,tableMgmtCard,recentCard)};
@@ -662,7 +691,7 @@ V.invoices=()=>{const q=(S.invQ||'').toLowerCase();const paid=L('order').filter(
   h('div',{class:'hint'},'Invoice'),h('div',{style:'font-weight:700;font-size:15px'},o.no+(o.type=='return'?' (return)':''),h('span',{class:'hint'},' · '+new Date(o.paidAt).toLocaleDateString())),
   h('div',{class:'hint'},'Client'),h('div',{},esc(o.cust.name||'walk-in')+' · '+(o.cust.phone||'')),
   h('div',{class:'row'},h('span',{class:'hint'},'Total'),h('b',{},inr(o.t.total))),
-  o.status=='void'?h('span',{class:'tag'},'Void'):null,
+  h('span',{class:'tag '+(o.status=='void'?'tag-void':'tag-paid')},o.status=='void'?'Void':'Paid'),
   h('div',{class:'row'},h('button',{class:'sm',onclick:()=>wa(o)},'Send'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Open'),
    can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',style:'color:#b3261e;border-color:#b3261e',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null))),
  !shown.length?h('p',{},q?'No invoice matches "'+esc(S.invQ)+'".':'No invoices yet.'):null]};
@@ -1029,15 +1058,19 @@ function stockForm(dept,it){const kind=DEPT_KIND[dept];
    dept=='stat'?h('button',{onclick:()=>{if(!f.sku.value)return alert('Enter or generate a barcode first');printBarcode(f.sku.value,f.name.value)}},'Print barcode'):null,
    it.id?h('button',{onclick:async()=>{await save(kind,it,it.id,true);x();render()}},'Delete'):null))}
 V.inv=()=>{if(!can('o'))return h('p',{},'Owner only.');const catsFor=d=>L('cat').filter(c=>c.dept==d).sort((a,b)=>a.n-b.n);
- const sect=dept=>{const items=dept=='book'?L('book'):dept=='cafe'?L('cafeitem'):L('stationery');
-  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},DM[dept].label+' categories'),h('span',{},h('button',{class:'sm',onclick:()=>{const n=prompt('Category name');n&&save('cat',{name:n,dept,n:Date.now()}).then(render)}},'Add category'),
+ /* Each department collapses to one line (name + item count) until opened -- with a large mixed
+    catalogue (novels, competitive/college books, stationery, toys...) showing all three departments'
+    full tables at once by default was the single biggest scroll on the whole app. */
+ const sect=(dept,open)=>{const items=dept=='book'?L('book'):dept=='cafe'?L('cafeitem'):L('stationery');
+  return sec(DM[dept].label+' ('+items.length+')',open,
+   h('div',{class:'row'},h('span',{},h('button',{class:'sm',onclick:()=>{const n=prompt('Category name');n&&save('cat',{name:n,dept,n:Date.now()}).then(render)}},'Add category'),
     dept=='book'?h('button',{class:'p sm',onclick:()=>bookForm({})},'Add book'):h('button',{class:'p sm',onclick:()=>stockForm(dept,{})},'Add item'),
     h('button',{class:'sm',onclick:()=>importModal(dept)},'Import CSV'))),
-   ...catsFor(dept).map(c=>h('span',{class:'tag',style:'margin-right:6px'},c.name,' ',h('button',{class:'sm',onclick:()=>confirm('Delete category?')&&save('cat',c,c.id,true).then(render)},'x')))),
-  h('div',{class:'card'},h('h3',{},DM[dept].label+' ('+items.length+')'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Price'),h('th',{},'GST%'),h('th',{},'Stock'),h('th',{})),
+   h('div',{},...catsFor(dept).map(c=>h('span',{class:'tag',style:'margin-right:6px'},c.name,' ',h('button',{class:'sm',onclick:()=>confirm('Delete category?')&&save('cat',c,c.id,true).then(render)},'x')))),
+   h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Price'),h('th',{},'GST%'),h('th',{},'Stock'),h('th',{})),
    ...items.map(it=>{const label=dept=='book'?it.title:it.name;const tracked=dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder;
-    return h('tr',{},h('td',{'data-label':'Name'},it.coverUrl?h('img',{src:it.coverUrl,style:'width:22px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:5px'}):null,label,dept=='book'&&(it.status||'active')=='inactive'?h('span',{class:'tag'},'inactive'):null),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))}))))};
- return h('div',{},sect('book'),sect('cafe'),sect('stat'))};
+    return h('tr',{},h('td',{'data-label':'Name'},it.coverUrl?h('img',{src:it.coverUrl,style:'width:22px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:5px'}):null,label,dept=='book'&&(it.status||'active')=='inactive'?h('span',{class:'tag'},'inactive'):null),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))})))};
+ return h('div',{class:'card'},sect('book',true),sect('cafe',false),sect('stat',false))};
 /* Staff PIN roster: a lightweight staff directory (name/PIN/role) for attribution on a shared device --
    distinct from Supabase Authentication logins below, which remain the actual sign-in credential this
    app checks. A PIN here identifies who's at the counter for a shift, it does not itself grant access;
@@ -1051,33 +1084,44 @@ function staffPinForm(sp){const name=h('input',{value:sp.name||'',placeholder:'N
    await save('staffpin',{...sp,name:name.value.trim(),pin:pin.value.trim(),role:role.value,email:email.value.trim()},sp.id);x();render()}},'Save'),
    sp.id?h('button',{onclick:async()=>{await save('staffpin',sp,sp.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
 V.staff=()=>{if(!can('o'))return h('p',{},'Owner only.');const pins=L('staffpin').sort((a,b)=>a.name.localeCompare(b.name));
- return h('div',{},
- h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Staff'),h('button',{class:'p sm',onclick:()=>staffPinForm({})},'Add staff')),
-  h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Name'),h('th',{},'Role'),h('th',{},'Email'),h('th',{})),
-   ...pins.map(sp=>h('tr',{},h('td',{class:'p1','data-label':'Name'},esc(sp.name)),h('td',{class:'p2','data-label':'Role'},sp.role+(sp.email?' · '+sp.email:'')),
-    h('td',{'data-label':'Role'},sp.role),h('td',{'data-label':'Email'},sp.email||'—'),h('td',{},h('button',{class:'sm',onclick:()=>staffPinForm(sp)},'Edit')))),
-   !pins.length?h('p',{},'No staff added yet.'):null),
- h('div',{class:'card'},h('h3',{},'Sign-in logins (Supabase Authentication)'),h('p',{class:'hint'},'To add a brand-new staff login, create the user in Supabase Authentication first (the app cannot create auth users without a service role key) — see SETUP-GUIDE.md section 6 — then set their role here.'),
-  h('table',{class:'rtable'},h('tr',{},h('th',{},'Email'),h('th',{},'Role')),
-   ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))),
- h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
-  h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
-   ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
-  !L('audit').length?h('p',{},'No audit entries yet.'):null))};
+ return h('div',{class:'card'},
+  sec('Staff ('+pins.length+')',true,h('div',{class:'row'},h('span',{},'PIN roster for attribution on a shared device'),h('button',{class:'p sm',onclick:()=>staffPinForm({})},'Add staff')),
+   h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Name'),h('th',{},'Role'),h('th',{},'Email'),h('th',{})),
+    ...pins.map(sp=>h('tr',{},h('td',{class:'p1','data-label':'Name'},esc(sp.name)),h('td',{class:'p2','data-label':'Role'},sp.role+(sp.email?' · '+sp.email:'')),
+     h('td',{'data-label':'Role'},sp.role),h('td',{'data-label':'Email'},sp.email||'—'),h('td',{},h('button',{class:'sm',onclick:()=>staffPinForm(sp)},'Edit')))),
+    !pins.length?h('p',{},'No staff added yet.'):null),
+  sec('Sign-in logins (Supabase Authentication) ('+PROFILES.length+')',false,h('p',{class:'hint'},'To add a brand-new staff login, create the user in Supabase Authentication first (the app cannot create auth users without a service role key) — see SETUP-GUIDE.md section 6 — then set their role here.'),
+   h('table',{class:'rtable'},h('tr',{},h('th',{},'Email'),h('th',{},'Role')),
+    ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r)))))))),
+  sec('Audit log',false,h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
+   h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
+    ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
+   !L('audit').length?h('p',{},'No audit entries yet.'):null)))};
 V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l,t)=>h('label',{style:'display:grid;gap:4px'},l,h('input',{type:t||'text',value:s[k],style:'width:100%',oninput:e=>F[k]=t=='number'?+e.target.value:e.target.value}));
- return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),
-  f('homeState','Home state (for CGST/SGST vs IGST — must match a GSTIN-derived state name, e.g. "Maharashtra")'),
-  f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),
-  h('h4',{},'GSTIN verification (optional)'),h('p',{class:'hint'},'GSTIN state-derivation and checksum validation works with no setup. Business name/address auto-fetch needs a paid third-party GSTIN-verification API (Surepass/Appyflow/ClearTax etc) — this app does not include one. Add your own key+endpoint here to enable it; leave blank to keep using format-derived data only.'),
-  f('gstinApiUrl','Verification API endpoint (GSTIN appended to the end)'),f('gstinApiKey','Verification API key'),
-  h('h4',{},'Invoice template'),h('p',{class:'hint'},'Branding for the printable invoice (Invoices tab) — logo, accent colour, bank details and a footer line (terms, return policy, thank-you note).'),
-  f('invLogoUrl','Logo image URL (optional)'),f('invAccent','Accent colour (hex, e.g. #141414)'),
-  h('h4',{},'Bank account (for payment, shown on invoice)'),f('bankName','Account holder / bank full name'),f('bankAccNo','Account number'),f('bankIfsc','IFSC code'),f('bankName2','Bank name & branch'),
-  f('invFooter','Footer / terms text'),
-  h('h4',{},'Shopify inventory sync (optional)'),h('p',{class:'hint'},"Integration point only — inactive until filled in. A sale here will also deduct stock on Shopify for any item that has a Shopify Inventory Item ID set (in its Edit form). Shopify's Admin API blocks direct browser requests (no CORS); a real deployment needs a small server-side proxy — set \"Proxy base URL\" to that proxy's address once you have one, otherwise leave blank."),
-  f('shopifyDomain','Store domain (e.g. yourstore.myshopify.com)'),f('shopifyToken','Admin API access token'),f('shopifyLocationId','Location ID'),f('shopifyProxyUrl','Proxy base URL (optional, for CORS)'),
-  h('button',{class:'p',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save')),
- h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids.'),h('p',{},'Manager: discounts, voids, returns.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles and manage the staff directory (with the audit log) in the Staff screen, owner only.')))};
+ const logoPreview=h('img',{src:s.invLogoUrl||'',style:'max-height:56px;max-width:160px;object-fit:contain;border:1px solid var(--line);border-radius:8px;padding:4px;background:#fff'+(s.invLogoUrl?'':';display:none')});
+ const logoRow=h('div',{style:'display:flex;align-items:center;gap:10px;flex-wrap:wrap'},logoPreview,
+  h('input',{type:'file',accept:'image/*',onchange:async e=>{const file=e.target.files[0];if(!file)return;
+   try{const durl=await resizeImageFile(file,320,140);F.invLogoUrl=durl;logoPreview.src=durl;logoPreview.style.display=''}
+   catch(err){alert(err.message)}}}),
+  h('button',{class:'sm',onclick:()=>{F.invLogoUrl='';logoPreview.src='';logoPreview.style.display='none'}},'Remove logo'));
+ /* Everything is one Save button across all sections, even though most sections are collapsed by
+    default -- collapsing with <details> only hides a section visually, the inputs stay in the DOM
+    and F still accumulates their edits normally. */
+ const saveBtn=h('button',{class:'p cta',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save settings');
+ return h('div',{},h('div',{class:'card'},
+  sec('Business details',true,f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),
+   f('homeState','Home state (for CGST/SGST vs IGST — must match a GSTIN-derived state name, e.g. "Maharashtra")'),
+   f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol')),
+  sec('Invoice template',false,h('p',{class:'hint'},'Branding for the printable invoice (Invoices tab) — logo, accent colour, bank details and a footer line (terms, return policy, thank-you note).'),
+   h('label',{style:'display:grid;gap:4px'},'Logo image',logoRow),f('invAccent','Accent colour (hex, e.g. #141414)'),
+   h('h4',{},'Bank account (for payment, shown on invoice)'),f('bankName','Account holder / bank full name'),f('bankAccNo','Account number'),f('bankIfsc','IFSC code'),f('bankName2','Bank name & branch'),
+   f('invFooter','Footer / terms text')),
+  sec('GSTIN verification (optional)',false,h('p',{class:'hint'},'GSTIN state-derivation and checksum validation works with no setup. Business name/address auto-fetch needs a paid third-party GSTIN-verification API (Surepass/Appyflow/ClearTax etc) — this app does not include one. Add your own key+endpoint here to enable it; leave blank to keep using format-derived data only.'),
+   f('gstinApiUrl','Verification API endpoint (GSTIN appended to the end)'),f('gstinApiKey','Verification API key')),
+  sec('Shopify inventory sync (optional)',false,h('p',{class:'hint'},"Integration point only — inactive until filled in. A sale here will also deduct stock on Shopify for any item that has a Shopify Inventory Item ID set (in its Edit form). Shopify's Admin API blocks direct browser requests (no CORS); a real deployment needs a small server-side proxy — set \"Proxy base URL\" to that proxy's address once you have one, otherwise leave blank."),
+   f('shopifyDomain','Store domain (e.g. yourstore.myshopify.com)'),f('shopifyToken','Admin API access token'),f('shopifyLocationId','Location ID'),f('shopifyProxyUrl','Proxy base URL (optional, for CORS)')),
+  saveBtn),
+ sec('Roles',false,h('p',{},'Owner: inventory, settings, staff roles, reports, voids.'),h('p',{},'Manager: discounts, voids, returns.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles and manage the staff directory (with the audit log) in the Staff screen, owner only.')))};
 function tabs(){const T=[['dash','Home'],['pos','Sell'],['orders','Orders'],['invoices','Invoices'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
 const TAB_ICON={dash:'dash',pos:'cart',orders:'orders',invoices:'print',rentals:'rental',membership:'clock',crm:'people',returns:'returns',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
 /* Unified Dashboard (Part 3 #1): the home screen, first tab. Deliberately reuses rangeOrders/
@@ -1118,7 +1162,7 @@ function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reloa
 function render(){const T=tabs();
  const af=document.activeElement,focusKey=af&&af.dataset&&af.dataset.focusKey;
  const selStart=focusKey!=null?af.selectionStart:null,selEnd=focusKey!=null?af.selectionEnd:null;
- const header=h('header',{class:'top'},h('span',{class:'ttl'},cfg().name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
+ const s0=cfg(),header=h('header',{class:'top'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},s0.name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
  const rail=h('nav',{class:'rail'},...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',title:n,onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',22))));
  const bottom=h('nav',{class:'bottom'},...T.slice(0,4).map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',20),h('span',{},n))),h('button',{class:T.slice(4).some(([k])=>k==S.tab)?'on':'',onclick:()=>moreMenu(T.slice(4))},icon('more',20),h('span',{},'More')));
  $('#app').replaceChildren(header,rail,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote();
@@ -1183,7 +1227,7 @@ function renderPublic(){const q=PUB.q.trim().toLowerCase();const total=r2(PUB.ca
    h('div',{class:'row'},h('input',{style:'width:48%;box-sizing:border-box',placeholder:'Your name *',value:PUB.custName,oninput:e=>PUB.custName=e.target.value}),h('input',{style:'width:48%;box-sizing:border-box',type:'tel',placeholder:'Phone *',value:PUB.custPhone,oninput:e=>PUB.custPhone=e.target.value})),
    h('input',{style:'width:100%;box-sizing:border-box',placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p cta',style:'width:100%',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
- $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu,
+ $('#app').replaceChildren(h('header',{class:'top'},PUB.settings.invLogoUrl?h('img',{src:PUB.settings.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu,
   count?h('div',{class:'pub-cartbar',onclick:()=>{const c=document.querySelector('.card');c&&c.scrollIntoView({behavior:'smooth',block:'start'})}},h('span',{},count+' item'+(count>1?'s':'')+' in your order'),h('b',{},inr(total))):null)}
 /* public, no-login printable invoice: index.html?i=<shortCode> (or, for orders saved before short
    codes existed, ?inv=<orderId>) -- reached via the WhatsApp bill-share link. Anonymous, scoped to
@@ -1196,7 +1240,7 @@ async function bootInvoicePublic(id,byShort){$('#app').textContent='Loading invo
  const{data:setRows}=await sb.from('records').select('data').eq('kind','settings').eq('deleted',false);
  R.settings={data:(setRows&&setRows[0]&&setRows[0].data)||{}};
  const o=data.data,card=h('div',{class:'card'});card.innerHTML=inv(o);
- $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(cfg().name||'Invoice'))),
+ $('#app').replaceChildren(h('header',{class:'top'},cfg().invLogoUrl?h('img',{src:cfg().invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},esc(cfg().name||'Invoice'))),
   h('div',{class:'wrap'},card,h('div',{class:'row'},h('button',{class:'p',onclick:()=>prnA4(inv(o))},'Print'))))}
 (function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else if(p.get('i')){bootInvoicePublic(p.get('i'),true)}else if(p.get('inv')){bootInvoicePublic(p.get('inv'),false)}else{boot()}})();
 </script></body></html>
