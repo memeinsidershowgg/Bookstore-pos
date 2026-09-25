@@ -82,6 +82,7 @@ body{padding-bottom:56px}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper b{min-width:16px;text-align:center}
 .pub-cartbar{position:fixed;left:12px;right:12px;bottom:12px;background:var(--accent);color:#fff;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--sh-lg);z-index:20;font-weight:600}
+.ticket{border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 12px;margin:8px 0;background:#fff}
 .cartsheet{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-sm)}
 @media(max-width:840px){
  .cartsheet{position:fixed;left:0;right:0;bottom:56px;transform:translateY(calc(100% - 48px));transition:transform .22s ease;max-height:82vh;overflow:auto;border-radius:14px 14px 0 0;box-shadow:0 -6px 24px #00000022;z-index:11;border-bottom:none}
@@ -536,7 +537,10 @@ function doReturn(order,line,max){const qtyF=h('input',{type:'number',value:max,
    const ro={id:uid(),no:nextNo(),type:'return',refNo:order.no,lines:[{dept:line.dept,id:line.id,name:line.name,price:line.price,gst:line.gst||0,qty:-qn,disc:line.disc||0}],status:'paid',created:now(),by:S.user.id,cust:order.cust||{},paidAt:now(),pays:[{m:method.value,amt:-amt}],changeDenoms:denoms};
    ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);await audit('return',ro.no+' ref '+order.no+' qty '+qn+' amt '+amt);x();prn(rcpt(ro));render()}},'Confirm return'),h('button',{onclick:()=>x()},'Cancel')))}
 /* table orders (from QR self-order) */
-function loadTorder(o){if(!S.curCafe)S.curCafe=newOrder();const oc=S.curCafe;o.lines.forEach(l=>{const it=rec(l.id);for(let i=0;i<(l.qty||1);i++)addLine('cafe',l.id,l.name,l.price,it?it.gst||0:0,oc)});if(o.tableName&&!oc.cust.name)oc.cust.tableTag=o.tableName;save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='orders';S.cartOpenCafe=true;render()})}
+function loadTorder(o){if(!S.curCafe)S.curCafe=newOrder();const oc=S.curCafe;o.lines.forEach(l=>{const it=rec(l.id);for(let i=0;i<(l.qty||1);i++)addLine('cafe',l.id,l.name,l.price,it?it.gst||0:0,oc)});
+ if(o.tableName&&!oc.cust.tableTag)oc.cust.tableTag=o.tableName;
+ if(o.cust){if(o.cust.name&&!oc.cust.name)oc.cust.name=o.cust.name;if(o.cust.phone&&!oc.cust.phone)oc.cust.phone=o.cust.phone}
+ save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='orders';S.cartOpenCafe=true;render()})}
 function rejectTorder(o){save('torder',{...o,status:'rejected'},o.id).then(render)}
 /* views */
 /* Custom item: a product not in inventory (one-off), added as its own line every time (fresh id) since
@@ -592,14 +596,27 @@ function cafeCustomItemModal(){const oc=S.curCafe;const name=h('input',{placehol
   h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{if(!name.value.trim()||!(+price.value>0))return alert('Enter a name and a price');
    oc.lines.push({dept:'cafe',id:uid(),name:name.value.trim(),price:+price.value,gst:+gst.value||0,qty:Math.max(1,Math.trunc(+qtyF.value)||1),disc:0});x();render()}},'Add to cart'),h('button',{onclick:()=>x()},'Cancel')))}
 V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').trim().toLowerCase();const t=tot(oc);
- const results=!q?L('cafeitem').sort((a,b)=>a.name.localeCompare(b.name)):L('cafeitem').filter(i=>i.name.toLowerCase().includes(q));
- const itemBtn=(low,oos,onclick,...content)=>h('button',{class:oos?'oos':'',disabled:oos&&!can('m'),onclick},...content,low&&!oos?h('div',{class:'tag low'},'Low stock'):null,oos?h('div',{class:'tag'},'Out of stock'):null);
+ /* Item rows now match the customer-facing menu (name+desc left, price+qty stepper right) instead
+    of a plain grid of buttons, grouped by category like the physical menu -- search collapses to a
+    flat matching list. Tapping a category pill jumps straight to that section. */
+ const allItems=L('cafeitem'),cats=L('cat').filter(c=>c.dept=='cafe').sort((a,b)=>a.n-b.n);
+ const itemRow=it=>{const tracked=it.track,low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;
+  const l=oc.lines.find(x=>x.dept=='cafe'&&x.id==it.id),qn=l?l.qty:0;
+  return h('div',{class:'menu-item'+(oos?' oos':'')},
+   h('div',{class:'mi-info'},h('b',{},it.name),it.desc?h('div',{class:'hint'},it.desc):null,
+    low&&!oos?h('span',{class:'tag low'},'Low stock'):null,oos?h('span',{class:'tag'},'Out of stock'):null,tracked&&!oos?h('span',{class:'hint'},'Stock '+(it.stock||0)):null),
+   h('div',{class:'mi-side'},h('span',{class:'price'},inr(it.price)),
+    (oos&&!can('m'))?null:qn?h('span',{class:'stepper'},h('button',{class:'sm',onclick:()=>qty(l,-1,oc)},'−'),h('b',{},qn),h('button',{class:'sm',onclick:()=>qty(l,1,oc)},'+')):
+     h('button',{class:'sm p',onclick:()=>addLine('cafe',it.id,it.name,it.price,it.gst||0,oc)},'Add')))};
+ const resultsBody=q?
+  h('div',{class:'menu-sec'},...allItems.filter(i=>i.name.toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name)).map(itemRow)):
+  h('div',{},...cats.map(c=>{const items=allItems.filter(i=>i.cat==c.id).sort((a,b)=>a.name.localeCompare(b.name));if(!items.length)return null;
+   return h('div',{class:'menu-sec',id:'osec-'+c.id},h('h3',{},c.name),...items.map(itemRow))}));
  const browse=h('div',{},
+  cats.length>1?h('div',{class:'row',style:'flex-wrap:wrap'},...cats.map(c=>h('button',{class:'sm pill',onclick:()=>{const el=document.getElementById('osec-'+c.id);el&&el.scrollIntoView({behavior:'smooth',block:'start'})}},c.name))):null,
   h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search cafe menu',value:S.qCafe||'','data-focus-key':'qCafe',oninput:e=>{S.qCafe=e.target.value;render()}})),
   h('div',{class:'row'},h('button',{class:'sm',onclick:cafeCustomItemModal},'+ Custom item')),
-  h('div',{class:'items'},...results.map(it=>{const tracked=it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;
-   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine('cafe',it.id,it.name,it.price,it.gst||0,oc)},h('b',{},it.name),it.desc?h('small',{class:'hint'},it.desc):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
-  results.length?null:h('p',{},'No cafe items match.'));
+  resultsBody,allItems.length?null:h('p',{},'No cafe items yet.'));
  const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),oc.no?h('small',{},oc.no):null),
   ...oc.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1,oc)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1,oc)},'+')),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
   oc.lines.length?null:h('p',{class:'empty-hint'},'Search above or load a table order to add items.'),
@@ -610,10 +627,19 @@ V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').t
   h('div',{class:'row'},h('button',{class:'p cta',onclick:()=>pay(oc,()=>{S.curCafe=null;S.cartOpenCafe=false}),disabled:!oc.lines.length},'Pay')),
   h('button',{onclick:()=>{S.curCafe=null;render()}},'Clear sale'));
  const cartSheet=h('div',{class:'cartsheet'+(S.cartOpenCafe?' open':'')},h('div',{class:'peek',onclick:()=>{S.cartOpenCafe=!S.cartOpenCafe;render()}},h('span',{class:'peek-lbl'},icon('cart',18),'Cart ('+oc.lines.reduce((a,l)=>a+l.qty,0)+') · '+inr(t.total)),h('span',{},S.cartOpenCafe?'▲':'▼')),cartBody);
- const pend=L('torder').filter(o=>o.status=='pending');const byTable={};pend.forEach(o=>{(byTable[o.table]=byTable[o.table]||[]).push(o)});
- const tableOrdersCard=h('div',{class:'card'},h('h3',{},'Table orders ('+pend.length+')'),h('p',{class:'hint'},'From customers who scanned a table QR code. Load into the cafe cart to bill it, or reject it.'),
-  Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{class:'card',style:'margin:8px 0'},h('h4',{},esc(os[0].tableName||('Table '+tid))),
-   ...os.map(o=>h('div',{class:'row'},h('div',{},...o.lines.map(l=>h('div',{},l.qty+'x '+esc(l.name))),o.note?h('div',{class:'hint'},'Note: '+esc(o.note)):null),h('span',{},h('button',{class:'p sm',onclick:()=>loadTorder(o)},'Load into cart'),h('button',{class:'sm',onclick:()=>rejectTorder(o)},'Reject')))))):h('p',{},'No pending table orders.'));
+ /* Ticket-style cards (customer, items, note, time) with clear Accept/Reject actions, oldest
+    order first so staff work the queue in order -- replaces the old plain rows. */
+ const pend=L('torder').filter(o=>o.status=='pending').sort((a,b)=>a.created>b.created?1:-1);
+ const byTable={};pend.forEach(o=>{(byTable[o.table]=byTable[o.table]||[]).push(o)});
+ const ticket=o=>h('div',{class:'ticket'},
+  h('div',{class:'row'},h('span',{},o.cust&&o.cust.name?h('b',{},esc(o.cust.name)):h('b',{},'Walk-in'),o.cust&&o.cust.phone?h('span',{class:'hint'},' · '+esc(o.cust.phone)):null),
+   h('span',{class:'hint'},o.created?new Date(o.created).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'')),
+  h('div',{style:'margin-top:4px'},...o.lines.map(l=>h('div',{},l.qty+'x '+esc(l.name)))),
+  o.note?h('div',{class:'hint'},'Note: '+esc(o.note)):null,
+  h('div',{class:'row',style:'margin-top:8px;gap:6px'},h('button',{class:'p sm',onclick:()=>loadTorder(o)},'Accept · Load into cart'),h('button',{class:'sm',onclick:()=>{if(confirm('Reject this order?'))rejectTorder(o)}},'Reject')));
+ const tableOrdersCard=h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Table orders'),pend.length?h('span',{class:'tag low'},pend.length+' new'):null),
+  h('p',{class:'hint'},'From customers who scanned a table QR code. Accept to load into the cafe cart, or reject.'),
+  Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{style:'margin:10px 0'},h('h4',{style:'margin:0 0 4px'},esc(os[0].tableName||('Table '+tid))),...os.map(ticket))):h('p',{class:'empty-hint'},'No pending table orders.'));
  const tables=L('table');
  const tableMgmtCard=h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Cafe tables (QR self-order)'),h('button',{class:'p sm',onclick:()=>{const n=prompt('Table name/number, e.g. T1');n&&save('table',{name:n}).then(render)}},'Add table')),
   ...tables.map(tb=>h('div',{class:'row'},tb.name,h('span',{},h('button',{class:'sm',onclick:()=>printTableQR(tb)},'Print QR'),h('button',{class:'sm',onclick:()=>confirm('Delete table?')&&save('table',tb,tb.id,true).then(render)},'Delete')))));
@@ -1110,7 +1136,7 @@ async function boot(){if(!C.url||C.url.includes('YOUR-PROJECT'))return $('#app')
  if(!S.user)return login();S.role=(c&&c.role)||'cashier';$('#app').textContent='Loading…';addEventListener('online',()=>{sync();setNote()});addEventListener('offline',setNote);
  sb.channel('r').on('postgres_changes',{event:'*',schema:'public',table:'records'},()=>sync()).subscribe();setInterval(sync,30000);await sync();if(can('o')&&!L('cat').length&&!localStorage.seeded)await seed();loadProfiles();render()}
 /* public, no-login table ordering: index.html?order=1&t=<tableId>&tn=<tableName> */
-const PUB={table:'',tableName:'',cart:[],cat:null,q:'',note:''};
+const PUB={table:'',tableName:'',cart:[],cat:null,q:'',note:'',custName:localStorage.pubName||'',custPhone:localStorage.pubPhone||''};
 async function bootPublic(t,tn){PUB.table=t;PUB.tableName=tn||('Table');$('#app').textContent='Loading menu…';
  const{data,error}=await sb.from('records').select('id,kind,data').in('kind',['cafeitem','cat','settings']).eq('deleted',false);
  if(error){$('#app').textContent='Could not load the menu. Check your connection and try again.';return}
@@ -1120,8 +1146,17 @@ function pubQtyFor(it){const l=PUB.cart.find(x=>x.id==it.id);return l?l.qty:0}
 function pubSet(it,q){q=Math.max(0,Math.trunc(q));const l=PUB.cart.find(x=>x.id==it.id);
  if(q<=0){if(l)PUB.cart=PUB.cart.filter(x=>x!==l)}else if(l)l.qty=q;else PUB.cart.push({id:it.id,name:it.name,price:it.price,qty:q});
  renderPublic()}
+/* Every torder row MUST carry its own id inside data.id, not just as the outer table row id --
+   loadTorder()/rejectTorder() (and save() generally) key off data.id when updating an existing
+   record. Without it here, "Load into cart"/"Reject" had no id to update and silently created a
+   brand new pending row each time instead, which is why table orders looked stuck/duplicated in
+   the Orders tab no matter how many times staff actioned them. */
 async function pubSubmit(){if(!PUB.cart.length)return;
- const{error}=await sb.from('records').insert({id:uid(),kind:'torder',data:{table:PUB.table,tableName:PUB.tableName,lines:PUB.cart,status:'pending',created:now(),note:PUB.note||''},deleted:false});
+ const name=(PUB.custName||'').trim(),phone=normPhone(PUB.custPhone||'');
+ if(!name||!phone)return alert('Please enter your name and phone number before sending the order.');
+ localStorage.pubName=name;localStorage.pubPhone=PUB.custPhone;
+ const id=uid();
+ const{error}=await sb.from('records').insert({id,kind:'torder',data:{id,table:PUB.table,tableName:PUB.tableName,lines:PUB.cart,status:'pending',created:now(),note:PUB.note||'',cust:{name,phone}},deleted:false});
  if(error){alert('Could not send the order — check your connection and try again.');return}
  PUB.cart=[];PUB.note='';renderPublic();alert('Order sent to the counter! You can keep adding items.')}
 /* Laid out like the printed physical menu the owner shared: every category shown at once as its own
@@ -1144,6 +1179,8 @@ function renderPublic(){const q=PUB.q.trim().toLowerCase();const total=r2(PUB.ca
   body,!q&&!PUB.cats.length?h('p',{},'Nothing on the menu yet.'):null,
   h('div',{class:'card'},h('h3',{},'Your order'),...PUB.cart.map(l=>h('div',{class:'row'},l.name,h('span',{},h('button',{class:'sm',onclick:()=>pubSet(l,l.qty-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>pubSet(l,l.qty+1)},'+')),inr(l.price*l.qty))),
    PUB.cart.length?null:h('p',{class:'empty-hint'},'Tap "Add" on any item to build your order.'),h('div',{class:'row'},h('b',{},'Total'),h('b',{},inr(total))),
+   h('p',{class:'hint'},'Your name and phone, so the counter knows whose order this is:'),
+   h('div',{class:'row'},h('input',{style:'width:48%;box-sizing:border-box',placeholder:'Your name *',value:PUB.custName,oninput:e=>PUB.custName=e.target.value}),h('input',{style:'width:48%;box-sizing:border-box',type:'tel',placeholder:'Phone *',value:PUB.custPhone,oninput:e=>PUB.custPhone=e.target.value})),
    h('input',{style:'width:100%;box-sizing:border-box',placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p cta',style:'width:100%',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
  $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu,
