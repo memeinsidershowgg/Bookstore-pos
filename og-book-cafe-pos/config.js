@@ -1,0 +1,1 @@
+window.CFG={url:'https://khluqaddtwcihmexdhpx.supabase.co',key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtobHVxYWRkdHdjaWhtZXhkaHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMzMxNTAsImV4cCI6MjEwNTkwOTE1MH0.WabvhSJedMFcQgHVv1C4gc8lM4pTRrLa9K-Oh-e6J60'};
