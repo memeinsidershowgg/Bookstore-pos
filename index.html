@@ -5,12 +5,20 @@
  --ok:#1e8e5a;--ok-bg:#e8f5ee;--warn:#b8790a;--warn-bg:#fdf1e0;--danger:#b3261e;--danger-bg:#fdecea}
 /* Status colour system: used only for at-a-glance state (paid/pending/void/low-stock/active), never as
    decoration -- the rest of the UI stays the black/white/grey "premium minimal" look asked for earlier. */
+/* Typography: a system-font stack tuned to prefer each platform's newest, most "designed" UI face
+   (SF Pro on Apple, Segoe UI Variable on Windows 11) rather than a webfont -- this app got burned
+   once already by a CDN (jsdelivr) being blocked on the owner's real network for QR/barcode libs, so
+   a Google Fonts import is a real risk here, not a style nitpick. Numbers use tabular-nums so prices
+   in a list line up instead of jittering column widths as digits change. */
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-h3{margin:0;font-size:15.5px;font-weight:700;letter-spacing:-.01em}
-h4{margin:6px 0 2px;font-size:12px;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+body{margin:0;font:14px/1.45 -apple-system,"SF Pro Display",BlinkMacSystemFont,"Segoe UI Variable","Segoe UI",Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1,"cv11" 1}
+h3{margin:0;font-size:16px;font-weight:800;letter-spacing:-.02em}
+h4{margin:6px 0 2px;font-size:11.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
 p{margin:4px 0}
+.price,.v,b,strong{font-variant-numeric:tabular-nums}
 :focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+@keyframes wrap-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.wrap{animation:wrap-in .3s var(--ease)}
 /* Density pass: default controls are 36-38px, not 44px -- this is a high-frequency till, not a
    leisurely form. Text inputs keep 16px font (iOS auto-zooms focused inputs below that), everything
    else runs a touch smaller. Pay/Complete-and-print/Send-order keep extra headroom via .cta. */
@@ -18,42 +26,54 @@ button,select{font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(-
 input,textarea{font:inherit;font-size:16px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:inherit;min-height:34px;transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
 input:focus,textarea:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px #1414141a;outline:none}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
-button:not(:disabled):hover{box-shadow:var(--sh-sm)}
+button:not(:disabled):hover{box-shadow:var(--sh-sm);transform:translateY(-1px)}
 button:not(:disabled):active{transform:scale(.96)}
 button.sm{min-height:28px;padding:3px 7px;font-size:11px}
-button.p,button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-button.cta{min-height:44px;font-size:14px;font-weight:700;box-shadow:var(--sh-sm)}
-button.cta:not(:disabled):hover{box-shadow:var(--sh-md)}
+button.sm:hover{transform:none}
+/* Primary buttons get a subtle gradient + a soft shadow tinted the same colour (not just grey) so
+   they read as "raised" and draw the eye, matching the depth in the reference dashboards. */
+button.p,button.on{background:linear-gradient(160deg,var(--accent2),var(--accent));color:#fff;border-color:var(--accent);box-shadow:0 2px 8px #14141433}
+button.p:not(:disabled):hover,button.on:not(:disabled):hover{box-shadow:0 6px 16px #14141440;transform:translateY(-1px)}
+button.cta{min-height:44px;font-size:14px;font-weight:700;box-shadow:0 4px 14px #14141433}
+button.cta:not(:disabled):hover{box-shadow:0 8px 22px #14141445;transform:translateY(-1px)}
 button:disabled{opacity:.4}
 button.pill{border-radius:999px;padding:5px 12px}
 button.pill.sm{padding:3px 10px}
 label{display:flex;align-items:center;gap:5px;font-size:12px}
 .ico{display:inline-flex;flex:none;align-items:center;justify-content:center;color:currentColor}
 .ico svg{display:block;width:100%;height:100%}
-header.top{display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;position:sticky;top:0;z-index:6;box-shadow:var(--sh-sm)}
-header.top .ttl{font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header.top{display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(120deg,var(--accent),var(--accent2) 70%);color:#fff;position:sticky;top:0;z-index:6;box-shadow:0 2px 12px #00000022}
+header.top .ttl{font-weight:800;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header.top .hdr-logo{height:26px;width:auto;max-width:100px;object-fit:contain;border-radius:5px;background:#fff;padding:2px 4px}
 header.top .stat{margin-left:auto;font-size:11px;opacity:.9;white-space:nowrap}
-header.top button{background:#ffffff22;color:#fff;border-color:#ffffff44;min-height:30px;padding:5px 9px;font-size:12px}
+header.top button{background:#ffffff1c;color:#fff;border-color:#ffffff38;min-height:30px;padding:5px 9px;font-size:12px;backdrop-filter:blur(6px)}
 nav.rail{display:none}
-nav.bottom{display:flex;position:fixed;left:0;right:0;bottom:0;background:#fffffff5;backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:12;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 12px #00000010}
-nav.bottom button{flex:1;border:none;border-radius:0;background:transparent;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:10px;min-height:50px;transition:color .15s var(--ease)}
+nav.bottom{display:flex;position:fixed;left:0;right:0;bottom:0;background:#fffffff5;backdrop-filter:blur(14px);border-top:1px solid var(--line);z-index:12;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 20px #00000014}
+nav.bottom button{flex:1;border:none;border-radius:0;background:transparent;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;min-height:52px;transition:color .15s var(--ease)}
 nav.bottom button:active{transform:none}
-nav.bottom button .ico{width:19px;height:19px;transition:transform .15s var(--ease)}
+nav.bottom button .ico{width:19px;height:19px;transition:transform .18s var(--ease)}
 nav.bottom button.on{color:var(--accent2);font-weight:700}
-nav.bottom button.on .ico{transform:translateY(-1px) scale(1.08)}
-body{padding-bottom:56px}
+nav.bottom button.on .ico{transform:translateY(-2px) scale(1.12)}
+nav.bottom button.on span:last-child{position:relative}
+nav.bottom button.on span:last-child::after{content:'';position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--accent2)}
+body{padding-bottom:60px}
+/* Desktop sidebar: a real labelled nav (icon + text, brand header, active pill with depth) instead of
+   a bare 60px icon rail -- matches the sidebar layouts in the reference dashboards. */
 @media(min-width:1024px){
  nav.bottom{display:none}
- body{padding-bottom:8px;padding-left:60px}
- header.top{margin-left:60px}
+ body{padding-bottom:8px;padding-left:226px}
+ header.top{margin-left:226px}
  .wrap{margin-left:0}
- nav.rail{display:flex;flex-direction:column;align-items:center;gap:4px;position:fixed;left:0;top:0;bottom:0;width:60px;background:var(--rail);padding:12px 0;z-index:15;overflow-y:auto}
- nav.rail button{background:transparent;border:none;color:#ffffffa8;width:40px;height:40px;min-height:40px;border-radius:11px;padding:0;display:flex;align-items:center;justify-content:center;transition:background .15s var(--ease),color .15s var(--ease)}
- nav.rail button:active{transform:none}
- nav.rail button .ico{width:20px;height:20px}
- nav.rail button.on{background:linear-gradient(135deg,var(--accent2),#161616);color:#fff}
- nav.rail button:hover{background:#ffffff14}
+ nav.rail{display:flex;flex-direction:column;gap:2px;position:fixed;left:0;top:0;bottom:0;width:226px;background:linear-gradient(190deg,#151515,var(--rail) 60%);padding:14px 10px;z-index:15;overflow-y:auto;box-shadow:3px 0 28px #00000035}
+ nav.rail .rail-brand{display:flex;align-items:center;gap:9px;padding:2px 8px 14px;margin-bottom:8px;color:#fff;font-weight:800;font-size:14.5px;letter-spacing:-.01em;border-bottom:1px solid #ffffff17}
+ nav.rail .rail-brand img{height:24px;width:auto;max-width:120px;object-fit:contain;border-radius:5px;background:#fff;padding:2px}
+ nav.rail .rail-brand .ico{color:#fff;opacity:.9}
+ nav.rail button{background:transparent;border:none;color:#ffffffa3;width:100%;min-height:38px;border-radius:10px;padding:0 10px;display:flex;align-items:center;gap:11px;font-size:12.5px;font-weight:600;text-align:left;transition:background .16s var(--ease),color .16s var(--ease),transform .12s var(--ease)}
+ nav.rail button:active{transform:scale(.98)}
+ nav.rail button .ico{width:18px;height:18px;flex:none}
+ nav.rail button .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ nav.rail button.on{background:linear-gradient(120deg,var(--accent2),#232323);color:#fff;box-shadow:0 3px 10px #00000045,inset 0 1px 0 #ffffff17}
+ nav.rail button:hover:not(.on){background:#ffffff12;color:#fff}
 }
 .wrap{max-width:1200px;margin:0 auto;padding:8px;display:grid;gap:8px}
 .g{display:grid;grid-template-columns:1fr 360px;gap:8px}
@@ -140,11 +160,13 @@ small{color:var(--sub)}.low{color:var(--danger);font-weight:700}.oos{opacity:.45
 .cartline{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 0;border-bottom:1px solid var(--line);font-size:13px}
 .cartline:last-of-type{border-bottom:none}
 .dashgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
-.stat-tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;box-shadow:var(--sh-sm);transition:box-shadow .2s var(--ease),transform .2s var(--ease)}
-@media(min-width:1024px){.stat-tile:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}}
-.stat-tile .v{font-size:18px;font-weight:800;line-height:1.15}
-.stat-tile .k{font-size:11px;color:var(--sub)}
-.stat-tile.warn{border-color:#b3261e;background:#fdeceb}
+.stat-tile{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px 10px 15px;box-shadow:var(--sh-sm);transition:box-shadow .2s var(--ease),transform .2s var(--ease);position:relative;overflow:hidden}
+.stat-tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent2),var(--accent))}
+@media(min-width:1024px){.stat-tile:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}}
+.stat-tile .v{font-size:20px;font-weight:800;line-height:1.2;letter-spacing:-.01em}
+.stat-tile .k{font-size:11px;color:var(--sub);margin-top:1px}
+.stat-tile.warn{border-color:var(--danger);background:var(--danger-bg)}
+.stat-tile.warn::before{background:var(--danger)}
 </style></head><body><div id=app></div>
 <script src=https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js></script>
 <script src=/config.js></script>
@@ -1163,7 +1185,9 @@ function render(){const T=tabs();
  const af=document.activeElement,focusKey=af&&af.dataset&&af.dataset.focusKey;
  const selStart=focusKey!=null?af.selectionStart:null,selEnd=focusKey!=null?af.selectionEnd:null;
  const s0=cfg(),header=h('header',{class:'top'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},s0.name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
- const rail=h('nav',{class:'rail'},...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',title:n,onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',22))));
+ const rail=h('nav',{class:'rail'},
+  h('div',{class:'rail-brand'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl}):icon('dash',20),h('span',{},s0.name||'POS')),
+  ...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',19),h('span',{class:'lbl'},n))));
  const bottom=h('nav',{class:'bottom'},...T.slice(0,4).map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',20),h('span',{},n))),h('button',{class:T.slice(4).some(([k])=>k==S.tab)?'on':'',onclick:()=>moreMenu(T.slice(4))},icon('more',20),h('span',{},'More')));
  $('#app').replaceChildren(header,rail,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote();
  if(focusKey){const el=$('[data-focus-key="'+focusKey+'"]');if(el){el.focus();try{el.setSelectionRange(selStart,selEnd)}catch{}}}}
