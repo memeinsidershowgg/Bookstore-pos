@@ -44,7 +44,11 @@ label{display:flex;align-items:center;gap:5px;font-size:12px}
 .ico svg{display:block;width:100%;height:100%}
 header.top{display:flex;align-items:center;gap:8px;padding:9px 14px;background:linear-gradient(120deg,var(--accent),var(--accent2) 70%);color:#fff;position:sticky;top:0;z-index:6;box-shadow:0 2px 12px #00000022}
 header.top .ttl{font-weight:800;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header.top .hdr-logo{height:26px;width:auto;max-width:100px;object-fit:contain;border-radius:5px;background:#fff;padding:2px 4px}
+/* No background/padding/radius box around the logo -- most uploaded logos already carry their own
+   framing (a card, a border, their own background colour), so wrapping that in a second white box
+   with different corners just produced a mismatched double-border/gap look. Let the image sit as-is,
+   sized to fit the header. */
+header.top .hdr-logo{height:34px;width:auto;max-width:130px;object-fit:contain}
 header.top .stat{margin-left:auto;font-size:11px;opacity:.9;white-space:nowrap}
 header.top button{background:#ffffff1c;color:#fff;border-color:#ffffff38;min-height:30px;padding:5px 9px;font-size:12px;backdrop-filter:blur(6px)}
 nav.rail{display:none}
@@ -1181,10 +1185,17 @@ function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reloa
    what showed up as "only accepts one letter at a time". Fix: every live-search input carries a stable
    data-focus-key matching the S.* field it edits; render() snapshots the focused element's key + cursor
    position beforehand and restores focus (and cursor) to the newly-built matching input afterward. */
+/* The browser tab icon (and what shows if the tab is pinned/bookmarked) is separate from the PWA
+   home-screen icon -- that one comes from manifest.json's icons array, which is a static file the
+   browser fetches once at install time and can't be swapped at runtime, so an uploaded logo can't
+   reach it without a real deploy. The tab favicon CAN be swapped live, so it is, everywhere the
+   business logo is shown (main app, self-order menu, public invoice). */
+function setFavicon(url){if(!url)return;const l=document.querySelector('link[rel="icon"]');if(l)l.href=url}
 function render(){const T=tabs();
  const af=document.activeElement,focusKey=af&&af.dataset&&af.dataset.focusKey;
  const selStart=focusKey!=null?af.selectionStart:null,selEnd=focusKey!=null?af.selectionEnd:null;
- const s0=cfg(),header=h('header',{class:'top'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},s0.name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
+ const s0=cfg();setFavicon(s0.invLogoUrl);
+ const header=h('header',{class:'top'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},s0.name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
  const rail=h('nav',{class:'rail'},
   h('div',{class:'rail-brand'},s0.invLogoUrl?h('img',{src:s0.invLogoUrl}):icon('dash',20),h('span',{},s0.name||'POS')),
   ...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',19),h('span',{class:'lbl'},n))));
@@ -1251,6 +1262,7 @@ function renderPublic(){const q=PUB.q.trim().toLowerCase();const total=r2(PUB.ca
    h('div',{class:'row'},h('input',{style:'width:48%;box-sizing:border-box',placeholder:'Your name *',value:PUB.custName,oninput:e=>PUB.custName=e.target.value}),h('input',{style:'width:48%;box-sizing:border-box',type:'tel',placeholder:'Phone *',value:PUB.custPhone,oninput:e=>PUB.custPhone=e.target.value})),
    h('input',{style:'width:100%;box-sizing:border-box',placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p cta',style:'width:100%',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
+ setFavicon(PUB.settings.invLogoUrl);
  $('#app').replaceChildren(h('header',{class:'top'},PUB.settings.invLogoUrl?h('img',{src:PUB.settings.invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu,
   count?h('div',{class:'pub-cartbar',onclick:()=>{const c=document.querySelector('.card');c&&c.scrollIntoView({behavior:'smooth',block:'start'})}},h('span',{},count+' item'+(count>1?'s':'')+' in your order'),h('b',{},inr(total))):null)}
 /* public, no-login printable invoice: index.html?i=<shortCode> (or, for orders saved before short
@@ -1264,6 +1276,7 @@ async function bootInvoicePublic(id,byShort){$('#app').textContent='Loading invo
  const{data:setRows}=await sb.from('records').select('data').eq('kind','settings').eq('deleted',false);
  R.settings={data:(setRows&&setRows[0]&&setRows[0].data)||{}};
  const o=data.data,card=h('div',{class:'card'});card.innerHTML=inv(o);
+ setFavicon(cfg().invLogoUrl);
  $('#app').replaceChildren(h('header',{class:'top'},cfg().invLogoUrl?h('img',{src:cfg().invLogoUrl,class:'hdr-logo'}):null,h('span',{class:'ttl'},esc(cfg().name||'Invoice'))),
   h('div',{class:'wrap'},card,h('div',{class:'row'},h('button',{class:'p',onclick:()=>prnA4(inv(o))},'Print'))))}
 (function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else if(p.get('i')){bootInvoicePublic(p.get('i'),true)}else if(p.get('inv')){bootInvoicePublic(p.get('inv'),false)}else{boot()}})();
