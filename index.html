@@ -1,6 +1,6 @@
-<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Bookstore POS</title><link rel=manifest href=/manifest.json><link rel=icon href=/icon.svg><meta name=theme-color content=#2e2a5a>
+<!doctype html><html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Bookstore POS</title><link rel=manifest href=/manifest.json><link rel=icon href=/icon.svg><meta name=theme-color content=#161616>
 <style>
-:root{--book:#4b3f8f;--cafe:#8a5a2b;--stat:#1f7a6c;--accent:#161616;--accent2:#2e2a5a;--rail:#111114;--bg:#f5f5f2;--card:#fff;--ink:#17171a;--sub:#6b6b70;--line:#e6e6e1;--r:14px;
+:root{--book:#3a3a3a;--cafe:#4a4a4a;--stat:#2a2a2a;--accent:#141414;--accent2:#3a3a3a;--rail:#0d0d0d;--bg:#f4f4f3;--card:#fff;--ink:#17171a;--sub:#6b6b70;--line:#e4e4e1;--r:14px;
  --sh-sm:0 1px 2px #00000010,0 1px 1px #0000000a;--sh-md:0 4px 16px #00000014,0 1px 2px #0000000f;--sh-lg:0 12px 32px #0000001f,0 2px 6px #00000012;--ease:cubic-bezier(.2,.7,.3,1)}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:8px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
@@ -13,7 +13,7 @@ p{margin:4px 0}
    else runs a touch smaller. Pay/Complete-and-print/Send-order keep extra headroom via .cta. */
 button,select{font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;color:inherit;min-height:34px;transition:transform .12s var(--ease),box-shadow .12s var(--ease),background .15s var(--ease),border-color .15s var(--ease)}
 input,textarea{font:inherit;font-size:16px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:inherit;min-height:34px;transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
-input:focus,textarea:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px #2e2a5a1a;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px #1414141a;outline:none}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:not(:disabled):hover{box-shadow:var(--sh-sm)}
 button:not(:disabled):active{transform:scale(.96)}
@@ -48,7 +48,7 @@ body{padding-bottom:56px}
  nav.rail button{background:transparent;border:none;color:#ffffffa8;width:40px;height:40px;min-height:40px;border-radius:11px;padding:0;display:flex;align-items:center;justify-content:center;transition:background .15s var(--ease),color .15s var(--ease)}
  nav.rail button:active{transform:none}
  nav.rail button .ico{width:20px;height:20px}
- nav.rail button.on{background:linear-gradient(135deg,var(--accent2),#4b3f8f);color:#fff}
+ nav.rail button.on{background:linear-gradient(135deg,var(--accent2),#161616);color:#fff}
  nav.rail button:hover{background:#ffffff14}
 }
 .wrap{max-width:1200px;margin:0 auto;padding:8px;display:grid;gap:8px}
@@ -93,7 +93,7 @@ th{font-size:11px;color:var(--sub);font-weight:600}
 }
 small{color:var(--sub)}.low{color:#b3261e;font-weight:700}.oos{opacity:.45}
 .tag{font-size:10px;background:#eef0e8;border-radius:6px;padding:1px 6px}
-.tag-book{background:#ece9f9;color:#4b3f8f}.tag-cafe{background:#f7ece0;color:#8a5a2b}.tag-stat{background:#e2f3f0;color:#1f7a6c}
+.tag-book{background:#e9e9e9;color:#2a2a2a}.tag-cafe{background:#f0f0f0;color:#3a3a3a}.tag-stat{background:#e4e4e4;color:#232323}.tag-custom{background:#ececec;color:#1a1a1a}.tag-addon{background:#eee;color:#555}
 .hint{font-size:11px;color:var(--sub)}
 .empty-hint{text-align:center;color:var(--sub);padding:20px 10px;font-size:13px}
 .denoms{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:5px}
@@ -119,7 +119,7 @@ small{color:var(--sub)}.low{color:#b3261e;font-weight:700}.oos{opacity:.45}
 <script src=https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js></script>
 <script src=/config.js></script>
 <script>
-const C=window.CFG||{},sb=supabase.createClient(C.url,C.key),S={tab:'pos',dept:'book',cur:null,role:'cashier',q:'',d:new Date().toLocaleDateString('en-CA'),ret:'',cartOpen:false},R={},V={};let busy=0,PROFILES=[];
+const C=window.CFG||{},sb=supabase.createClient(C.url,C.key),S={tab:'pos',cur:null,curCafe:null,role:'cashier',q:'',qCafe:'',d:new Date().toLocaleDateString('en-CA'),ret:'',cartOpen:false,cartOpenCafe:false},R={},V={};let busy=0,PROFILES=[];
 const $=s=>document.querySelector(s),uid=()=>crypto.randomUUID(),now=()=>new Date().toISOString(),r2=n=>Math.round(n*100)/100,inr=n=>cfg().cur+r2(n);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const h=(t,a={},...k)=>{const e=document.createElement(t);for(const x in a){const v=a[x];if(v==null||v===false)continue;x.startsWith('on')?e[x]=v:x=='class'?e.className=v:e.setAttribute(x,v)}e.append(...k.flat().filter(x=>x!=null&&x!==false));return e};
@@ -151,9 +151,9 @@ const ICONS={
 const icon=(name,size)=>{const s=h('span',{class:'ico'});s.style.width=s.style.height=(size||20)+'px';s.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||ICONS.more}</svg>`;return s};
 const L=k=>Object.values(R).filter(r=>r.kind==k&&!r.deleted).map(r=>r.data),rec=id=>R[id]&&!R[id].deleted?R[id].data:null;
 const cfg=()=>({name:'My Bookstore & Cafe',addr:'',phone:'',taxid:'',tax:5,ptsPer:100,prefix:'INV',cur:'₹',homeState:'',gstinApiKey:'',gstinApiUrl:'',
- invLogoUrl:'',invFooter:'',invAccent:'#141414',shopifyDomain:'',shopifyToken:'',shopifyLocationId:'',shopifyProxyUrl:'',
+ invLogoUrl:'',invFooter:'',invAccent:'#141414',bankName:'',bankAccNo:'',bankIfsc:'',bankName2:'',shopifyDomain:'',shopifyToken:'',shopifyLocationId:'',shopifyProxyUrl:'',
  ...(R.settings&&R.settings.data)}),can=x=>S.role=='owner'||(x=='m'&&S.role=='manager');
-const DM={book:{label:'Books',gst:0},cafe:{label:'Cafe',gst:5},stat:{label:'Stationery',gst:18}};
+const DM={book:{label:'Books',gst:0},cafe:{label:'Cafe',gst:5},stat:{label:'Stationery',gst:18},custom:{label:'Custom',gst:0},addon:{label:'Add-on',gst:0}};
 /* GSTIN: standard 2024 Indian state/UT code table (first 2 digits of a GSTIN). Used purely client-side
    to derive the party's state (for the CGST/SGST-vs-IGST call) and to validate the checksum -- there is
    no free unauthenticated live-registry lookup, so this is explicitly "derived from GSTIN format", not
@@ -213,7 +213,10 @@ const MEMBER_PLANS=[{id:'p30',label:'30 hrs / month',price:999,hours:30},{id:'p6
    Beyond 2 months (or never returned) we treat the book as forfeited/sold: refund 0%, so the
    store isn't left holding an open liability forever; staff can always override with a manual
    store-credit adjustment via custModal if a judgment call is needed for a specific customer. */
-function rentalRefundPct(days){if(days<=7)return.8;if(days<=30)return.7;if(days<=60)return.6;return 0}
+/* Return period is now set per rental by the cashier (not a fixed 7-day tier), so the refund tiers
+   scale off it -- within the set period keeps the same 80% the fixed system gave a within-a-week
+   return, up to 4x the period 70%, up to 8x 60%, beyond that forfeited. */
+function rentalRefundPct(days,period){period=period||7;if(days<=period)return.8;if(days<=period*4)return.7;if(days<=period*8)return.6;return 0}
 /* per-prefix ticket numbering, separate counters so invoice numbering (key 'n') is untouched */
 function ticketNo(counterKey,prefix){const n=(+localStorage[counterKey]||0)+1;localStorage[counterKey]=n;const dv=localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2,4).toUpperCase());return prefix+'-'+dv+'-'+String(n).padStart(4,'0')}
 /* stock ledger: an append-only movement log per item, shown as a running total instead of a raw number */
@@ -236,11 +239,21 @@ const tx=async(s,m,f)=>{const d=await idb;return new Promise((res,rej)=>{const t
 const all=s=>tx(s,'readonly',o=>o.getAll()),get=(s,k)=>tx(s,'readonly',o=>o.get(k)),put=(s,v)=>tx(s,'readwrite',o=>o.put(v)),del=(s,k)=>tx(s,'readwrite',o=>o.delete(k));
 async function save(kind,data,id=data.id||uid(),deleted=false){data.id=id;const r={id,kind,data,deleted,updated_at:now()};R[id]=r;await put('rec',r);await put('out',r);sync();return r}
 async function setNote(){const n=(await all('out')).length,e=$('#net');if(e)e.textContent=(navigator.onLine?'Online':'Offline')+(n?' · '+n+' unsynced':' · synced')+' · '+S.role}
+/* Cafe staff notification for a new table-QR order: a short beep (Web Audio, no asset needed) plus an
+   in-app toast, and a real OS notification if permission is already granted. Guarded by firstSyncDone
+   so the historical catch-up on first boot/login doesn't fire one notification per already-resolved
+   old table order -- only orders that arrive AFTER this device has finished its initial sync count. */
+let firstSyncDone=false;
+function beep(){try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.value=.15;o.start();setTimeout(()=>{o.stop();ctx.close()},220)}catch{}}
+function toast(msg){const t=h('div',{style:'position:fixed;left:50%;bottom:70px;transform:translateX(-50%);background:#141414;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:50;box-shadow:var(--sh-lg);max-width:90vw;text-align:center'},msg);
+ document.body.append(t);setTimeout(()=>t.remove(),4500)}
+function notifyNewTableOrder(td){beep();const msg='New table order — '+(td.tableName||'Table')+': '+(td.lines||[]).map(l=>l.qty+'x '+l.name).join(', ');toast(msg);
+ if('Notification' in window&&Notification.permission=='granted')new Notification('New table order',{body:msg})}
 async function sync(){if(busy||!navigator.onLine||!S.user)return;busy=1;try{const{data:{session}}=await sb.auth.getSession();if(!session)throw 0;
  for(const r of await all('out')){const{error}=await sb.from('records').upsert({id:r.id,kind:r.kind,data:r.data,deleted:r.deleted});if(error)throw error;const c=await get('out',r.id);if(c&&c.updated_at==r.updated_at)await del('out',r.id)}
  const since=((await get('meta','since'))||{}).v||'1970-01-01T00:00:00Z',{data,error}=await sb.from('records').select('id,kind,data,deleted,updated_at').gte('updated_at',since).order('updated_at').limit(1000);if(error)throw error;let ch=0;
- for(const r of data){if(await get('out',r.id)||(R[r.id]&&R[r.id].updated_at==r.updated_at))continue;R[r.id]=r;await put('rec',r);ch++}
- if(data.length)await put('meta',{k:'since',v:data[data.length-1].updated_at});if(ch&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))render();if(data.length>=1000)setTimeout(sync,500)}catch(e){console.warn('sync',e)}busy=0;setNote()}
+ for(const r of data){const isNewTorder=firstSyncDone&&r.kind=='torder'&&r.data.status=='pending'&&!R[r.id];if(await get('out',r.id)||(R[r.id]&&R[r.id].updated_at==r.updated_at))continue;R[r.id]=r;await put('rec',r);ch++;if(isNewTorder)notifyNewTableOrder(r.data)}
+ if(data.length)await put('meta',{k:'since',v:data[data.length-1].updated_at});if(ch&&!/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))render();if(data.length>=1000)setTimeout(sync,500);firstSyncDone=true}catch(e){console.warn('sync',e)}busy=0;setNote()}
 /* money: GST-INCLUSIVE pricing. l.price is the final shelf/selling price the customer pays, GST already
    baked in -- a ₹5 pen with 18% GST is sold for ₹5, not ₹5.90. So a line's gross (what's charged) is
    price*qty*(1-disc%), and the GST amount for that line is EXTRACTED from the gross rather than added:
@@ -260,11 +273,11 @@ function tot(o){const lineGross=o.lines.map(l=>r2(l.price*l.qty*(1-(l.disc||0)/1
  return{sub,d,tax,taxable,total,byRate,cgst,sgst,igst,interState:inter}}
 function nextNo(){const n=(+localStorage.n||0)+1;localStorage.n=n;const dv=localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2,4).toUpperCase());return cfg().prefix+'-'+dv+'-'+String(n).padStart(4,'0')}
 const newOrder=()=>({id:uid(),lines:[],status:'cart',type:'sale',created:now(),by:S.user.id,cust:{}});
-async function persist(){const o=S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await save('order',o,o.id)}
+async function persist(o){o=o||S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await save('order',o,o.id)}
 /* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels, via an offscreen print-iframe */
 function prn(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
 function prnA4(html){const f=h('iframe',{style:'position:fixed;width:0;height:0;border:0'});document.body.append(f);const d=f.contentDocument;d.write('<style>@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}</style>'+html);d.close();f.contentWindow.focus();f.contentWindow.print();setTimeout(()=>f.remove(),3000)}
-function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')).join(', ');
+function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')+(o.type=='return'&&p.m=='cash'&&o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':'')).join(', ');
  return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}${s.taxid?'<br>Tax ID '+esc(s.taxid):''}<hr>${o.no}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''} · ${new Date(o.paidAt||o.created).toLocaleString()}<br>${esc((o.cust||{}).name)} ${esc((o.cust||{}).phone)}<hr><table width=100%>${o.lines.map(l=>`<tr><td>${l.qty}x ${esc(l.name)}<br><small>${(DM[l.dept]||{}).label||l.dept}${l.gst?' · incl. GST '+l.gst+'%':''}</small></td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}</table><hr>${t.d?'Item total '+t.sub+'<br>Discount -'+t.d+'<br>':''}<b>Total (GST incl.) ${t.total}</b>${t.tax?'<br><small>GST included: '+t.tax+(t.interState?(t.igst?' (IGST '+t.igst+')':''):((t.cgst?' (CGST '+t.cgst:'')+(t.sgst?' + SGST '+t.sgst+')':')')))+'</small>':''}<br>${o.type=='return'?'Refunded '+payLine:'Paid '+payLine}${o.change?'<br>Change given: '+inr(o.change)+(o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':''):''}<br>Thank you!`}
 /* CA-format invoice: when billing a B2B party (o.cust.gstin set) shows the buyer's GSTIN + registered
    name/address and the CGST/SGST/IGST breakdown a GST-compliant B2B tax invoice needs; a plain retail
@@ -272,30 +285,69 @@ function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(
    Prices are GST-inclusive (see tot()) -- "Rate" below is the final shelf price, "Taxable" and the GST
    columns are informational values extracted from it, not added on top; Total = sum of Rate*Qty-disc.
    Customizable via Settings: invLogoUrl/invFooter/invAccent let the owner brand this without editing code. */
-function inv(o){const s=cfg(),t=o.t,c=o.cust||{},b2b=!!c.gstin,accent=s.invAccent||'#141414';
- return `<div style="font-family:system-ui,sans-serif;color:#1a1a1a">
-<style>.iv-tbl{border-collapse:collapse;width:100%}.iv-tbl th{background:${accent};color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.03em;padding:6px 8px;text-align:left}.iv-tbl td{padding:6px 8px;border-bottom:1px solid #e3e3de;font-size:13px}.iv-tbl td.r,.iv-tbl th.r{text-align:right}.iv-tot td{border:none;padding:3px 8px}</style>
-<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ${accent};padding-bottom:10px;margin-bottom:14px">
- <div style="display:flex;gap:10px;align-items:center">${s.invLogoUrl?`<img src="${esc(s.invLogoUrl)}" style="max-height:56px;max-width:120px;object-fit:contain">`:''}<div><div style="font-size:20px;font-weight:800">${esc(s.name)}</div><div style="font-size:12px;color:#555">${esc(s.addr)}${s.phone?' · '+esc(s.phone):''}${s.taxid?'<br>GSTIN '+esc(s.taxid):''}</div></div></div>
- <div style="text-align:right"><div style="font-size:16px;font-weight:700;color:${accent}">${b2b?'TAX INVOICE':'INVOICE'}</div><div style="font-size:13px">${esc(o.no)}${o.type=='return'?' (RETURN, ref '+esc(o.refNo)+')':''}</div><div style="font-size:12px;color:#555">${new Date(o.paidAt||o.created).toLocaleString()}</div></div>
+/* Layout matches the owner's reference template: a dark left sidebar (brand mark, Invoice-to, Payment
+   bank details, Terms, thank-you) beside a white main column (INVOICE title, date/total-due, items
+   table, GST breakdown boxed above the total, signature). Pure black/white/grey -- no colour accent by
+   default, matching the "premium, black/white/grey" instruction; invAccent still overrides it if set. */
+function inv(o){const s=cfg(),t=o.t,c=o.cust||{},b2b=!!c.gstin,accent=s.invAccent||'#141414',link=invLink(o);
+ const bank=(s.bankName||s.bankAccNo||s.bankIfsc||s.bankName2)?`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-top:18px">Payment</div>
+  ${s.bankName?`<div style="font-size:12px;font-weight:600;margin-top:4px">${esc(s.bankName)}</div>`:''}
+  ${s.bankAccNo?`<div style="font-size:12px">A/c ${esc(s.bankAccNo)}</div>`:''}${s.bankIfsc?`<div style="font-size:12px">IFSC ${esc(s.bankIfsc)}</div>`:''}${s.bankName2?`<div style="font-size:12px">${esc(s.bankName2)}</div>`:''}`:'';
+ return `<div style="display:flex;font-family:system-ui,sans-serif;color:#1a1a1a;min-height:100%">
+<style>.iv-tbl{border-collapse:collapse;width:100%}.iv-tbl th{border-bottom:2px solid #1a1a1a;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:6px 4px;text-align:left;color:#555}.iv-tbl td{padding:7px 4px;border-bottom:1px solid #e6e6e1;font-size:13px}.iv-tbl td.r,.iv-tbl th.r{text-align:right}.iv-tot td{border:none;padding:3px 0}</style>
+<div style="width:34%;background:#141414;color:#f2f2f0;padding:22px 16px;box-sizing:border-box;display:flex;flex-direction:column">
+ ${s.invLogoUrl?`<img src="${esc(s.invLogoUrl)}" style="max-height:48px;max-width:140px;object-fit:contain;margin-bottom:8px">`:''}
+ <div style="font-size:18px;font-weight:800;letter-spacing:-.01em">${esc(s.name)}</div>
+ <div style="font-size:11px;color:#aaa;margin-top:4px">${esc(s.addr)}${s.phone?'<br>'+esc(s.phone):''}${s.taxid?'<br>GSTIN '+esc(s.taxid):''}</div>
+ <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-top:22px">Invoice to</div>
+ <div style="font-size:13px;font-weight:700;margin-top:4px">${esc(c.legalName||c.name||'Walk-in customer')}</div>
+ <div style="font-size:12px;color:#ccc">${esc(c.phone||'')}${b2b?`<br>GSTIN: ${esc(c.gstin)}${c.state?' · '+esc(c.state):''}<br>${esc(c.address||'')}`:''}</div>
+ ${bank}
+ <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#999;margin-top:18px">Terms</div>
+ <div style="font-size:11px;color:#aaa;margin-top:4px">${esc(s.invFooter||'Thank you for your business!')}</div>
+ <div style="margin-top:auto;padding-top:24px;font-size:12px;font-weight:700;letter-spacing:.03em">THANK YOU<br>FOR YOUR BUSINESS</div>
 </div>
-<div style="margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;color:#888;letter-spacing:.03em">Bill to</div><div style="font-size:14px;font-weight:600">${esc(c.legalName||c.name||'Walk-in customer')}</div><div style="font-size:12px;color:#555">${esc(c.phone||'')}${b2b?`<br>GSTIN: ${esc(c.gstin)}${c.state?' · State: '+esc(c.state):''}<br>${esc(c.address||'')}`:''}</div></div>
-<table class="iv-tbl"><tr><th>Item</th><th>Dept</th><th class=r>Qty</th><th class=r>Rate</th><th class=r>Disc%</th><th class=r>GST%</th><th class=r>Amount</th></tr>
-${o.lines.map(l=>`<tr><td>${esc(l.name)}</td><td>${(DM[l.dept]||{}).label||l.dept}</td><td class=r>${l.qty}</td><td class=r>${r2(l.price)}</td><td class=r>${l.disc||0}</td><td class=r>${l.gst||0}</td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}
-</table>
-<div style="display:flex;justify-content:flex-end;margin-top:10px"><table class="iv-tot" style="width:280px">${t.d?`<tr><td>Item total</td><td class=r>${t.sub}</td></tr><tr><td>Discount</td><td class=r>-${t.d}</td></tr>`:''}
-<tr><td>Taxable value</td><td class=r>${t.taxable}</td></tr>
-${t.interState?`<tr><td>IGST</td><td class=r>${t.igst}</td></tr>`:`<tr><td>CGST</td><td class=r>${t.cgst}</td></tr><tr><td>SGST</td><td class=r>${t.sgst}</td></tr>`}
-<tr style="border-top:2px solid ${accent}"><td><b>Total (GST incl.)</b></td><td class=r><b>${t.total}</b></td></tr></table></div>
-<div style="margin-top:14px;font-size:13px">Paid: ${(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')||'-'}</div>
-<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:36px;border-top:1px solid #e3e3de;padding-top:10px">
- <div style="font-size:11px;color:#888;max-width:60%">${esc(s.invFooter||'Thank you for your business!')}</div>
- <div style="text-align:center;font-size:11px;color:#555">For ${esc(s.name)}<div style="margin-top:32px;border-top:1px solid #999;padding-top:2px">Authorized Signatory</div></div>
+<div style="width:66%;padding:22px 20px;box-sizing:border-box">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div style="font-size:11px;color:#888">${new Date(o.paidAt||o.created).toLocaleDateString()}<br>Total due<br><b style="font-size:15px;color:#1a1a1a">${inr(t.total)}</b></div>
+  <div style="text-align:right"><div style="font-size:26px;font-weight:800;letter-spacing:.02em">${b2b?'TAX INVOICE':'INVOICE'}</div><div style="font-size:12px;color:#888">Invoice# ${esc(o.no)}${o.type=='return'?' (return, ref '+esc(o.refNo)+')':''}</div></div>
+ </div>
+ <table class="iv-tbl" style="margin-top:18px"><tr><th>Description</th><th class=r>Rate</th><th class=r>Qty</th><th class=r>Total</th></tr>
+ ${o.lines.map(l=>`<tr><td>${esc(l.name)}${l.gst?` <span style="color:#999;font-size:11px">(GST ${l.gst}%)</span>`:''}</td><td class=r>${r2(l.price)}</td><td class=r>${l.qty}</td><td class=r>${r2(l.price*l.qty*(1-(l.disc||0)/100))}</td></tr>`).join('')}
+ </table>
+ <div style="display:flex;justify-content:flex-end;margin-top:10px"><table class="iv-tot" style="width:240px">${t.d?`<tr><td>Item total</td><td class=r>${t.sub}</td></tr><tr><td>Discount</td><td class=r>-${t.d}</td></tr>`:''}
+ <tr><td>Taxable value</td><td class=r>${t.taxable}</td></tr>
+ ${t.interState?`<tr><td>IGST</td><td class=r>${t.igst}</td></tr>`:`<tr><td>CGST</td><td class=r>${t.cgst}</td></tr><tr><td>SGST</td><td class=r>${t.sgst}</td></tr>`}
+ </table></div>
+ <div style="display:flex;justify-content:flex-end;margin-top:6px"><table style="width:240px;border-collapse:collapse"><tr style="border:1.5px solid #1a1a1a"><td style="padding:7px 8px;font-weight:800">TOTAL</td><td style="padding:7px 8px;font-weight:800;text-align:right">${inr(t.total)}</td></tr></table></div>
+ <div style="margin-top:14px;font-size:12px;color:#555">Paid: ${(o.pays||[]).map(p=>p.m+' '+p.amt).join(', ')||'-'}</div>
+ <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:34px">
+  <div style="font-size:10px;color:#999">Bill: ${esc(link)}</div>
+  <div style="text-align:center;font-size:11px;color:#555">For ${esc(s.name)}<div style="margin-top:30px;border-top:1px solid #999;padding-top:2px">Authorized Signatory</div></div>
+ </div>
 </div></div>`}
+/* Invoice share link, kept as short as possible: a 10-char opaque code (o.short) instead of the full
+   36-char UUID id -- ~59 bits of entropy, the same "anyone with the link can view it, nobody can guess
+   it" trust model as before, just a shorter code. Older orders saved before this existed have no
+   .short, so invLink() falls back to the full id for them. */
+function invLink(o){return location.origin+'/?i='+(o.short||o.id)}
 function wa(o){let p=((o.cust||{}).phone||prompt('Customer phone')||'').replace(/\D/g,'');if(!p)return;if(p.length==10)p='91'+p;
- const link=location.origin+'/?inv='+o.id;
+ const link=invLink(o);
  open('https://wa.me/'+p+'?text='+encodeURIComponent(`Thanks for visiting ${cfg().name}!\nBill ${o.no}\n`+o.lines.map(l=>`${l.qty}x ${l.name}: ${inr(l.price*l.qty)}`).join('\n')+`\nTotal: ${inr(o.t.total)}\n\nView/print your bill: ${link}`),'_blank')}
 function modal(...k){const o=h('div',{class:'ov',onclick:e=>e.target==o&&o.remove()},h('div',{class:'md'},...k));document.body.append(o);return()=>o.remove()}
+/* Post-payment "Invoice created" popup, per the reference screenshot: bill no + customer + total, then
+   Send on WhatsApp / Open invoice / Copy link / Done. Shown right after any sale completes instead of
+   silently firing WhatsApp in the background, so the cashier sees confirmation and has a fallback
+   (copy link) if the customer isn't reachable on WhatsApp right then. */
+function invoiceCreatedPopup(o){const link=invLink(o);
+ const x=modal(h('h3',{},'Invoice created'),
+  h('div',{},h('b',{},o.no),' for '+esc(o.cust.name||'walk-in')+': ',h('b',{},inr(o.t.total))),
+  h('p',{class:'hint'},'The WhatsApp message includes the itemised bill and a link to the invoice.'),
+  h('div',{class:'actions'},
+   h('button',{class:'p cta',onclick:()=>{wa(o)}},'Send on WhatsApp'),
+   h('button',{onclick:()=>prnA4(inv(o))},'Open invoice'),
+   h('button',{onclick:async()=>{try{await navigator.clipboard.writeText(link);alert('Link copied')}catch{prompt('Copy this link',link)}}},'Copy link'),
+   h('button',{onclick:()=>x()},'Done')))}
 function genCode(prefix){return prefix+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
 /* QR/barcode generation depends on the qrcode/jsbarcode CDN scripts loaded in <head>. If either script
    fails to load (offline first paint, a blocked/slow CDN, a strict network) the global (QRCode /
@@ -314,12 +366,16 @@ async function printTableQR(t){if(!await ensureLib('qrcode','QRCode'))return ale
   prn(`<div style="width:60mm;text-align:center"><div style="font:14px sans-serif;font-weight:700">${esc(t.name)}</div><img src="${cv.toDataURL()}" width=200><div style="font:10px monospace;word-break:break-all">${esc(url)}</div></div>`)})}
  catch(e){console.error('printTableQR',e);alert('Could not generate the QR code: '+e.message)}}
 /* selling */
-function addLine(dept,id,name,price,gst){const o=S.cur;const l=o.lines.find(x=>x.dept==dept&&x.id==id);l?l.qty++:o.lines.push({dept,id,name,price,gst:gst||0,qty:1,disc:0});render()}
+/* addLine/qty take an explicit order (o) so the same cart logic serves both the Sell cart (S.cur,
+   books+stationery) and the separate Orders/cafe cart (S.curCafe) -- two independent bills, per the
+   "only two types of bill" requirement, never the same underlying order object. Defaults to S.cur so
+   every existing Sell-tab call site keeps working unchanged. */
+function addLine(dept,id,name,price,gst,o){o=o||S.cur;const l=o.lines.find(x=>x.dept==dept&&x.id==id);l?l.qty++:o.lines.push({dept,id,name,price,gst:gst||0,qty:1,disc:0});render()}
 function scan(val){val=(val||'').trim();if(!val)return;
  const b=L('book').find(x=>x.isbn&&x.isbn==val);if(b){if((b.stock||0)<=0&&!can('m'))return alert('Out of stock: '+b.title);return addLine('book',b.id,b.title,b.price,0)}
  const s=L('stationery').find(x=>x.sku&&x.sku==val);if(s){if((s.stock||0)<=0&&!can('m'))return alert('Out of stock: '+s.name);return addLine('stat',s.id,s.name,s.price,s.gst||0)}
  alert('No item found for barcode "'+val+'"')}
-function qty(l,d){l.qty+=d;if(l.qty<=0)S.cur.lines=S.cur.lines.filter(x=>x!==l);render()}
+function qty(l,d,o){o=o||S.cur;l.qty+=d;if(l.qty<=0)o.lines=o.lines.filter(x=>x!==l);render()}
 function lineDisc(l){const v=prompt('Line discount %',l.disc||0);if(v==null)return;l.disc=Math.max(0,Math.min(100,+v||0));render()}
 function denomPicker(onChange){const vals={};const grid=h('div',{class:'denoms'},...DENOMS.map(d=>{const inp=h('input',{type:'number',min:0,placeholder:'0',oninput:e=>{vals[d.v]=Math.max(0,+e.target.value||0);onChange(sum())}});return h('label',{},'₹'+d.v+(d.rare?' *':''),inp)}));
  function sum(){return DENOMS.reduce((a,d)=>a+(vals[d.v]||0)*d.v,0)}
@@ -367,7 +423,7 @@ function custModal(o){const phone=normPhone((o.cust&&o.cust.phone)||o.phone||'')
   h('h4',{},'Message for offers'),msgText,h('button',{class:'sm',onclick:()=>waMsg(phone,msgText.value)},'Open WhatsApp'),
   h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function denomSummary(v){return Object.entries(v||{}).filter(([,n])=>n>0).map(([d,n])=>n+'×₹'+d).join(', ')}
-function pay(){const o=S.cur;if(!o.lines.length)return;
+function pay(o,clearFn){o=o||S.cur;clearFn=clearFn||(()=>{S.cur=null;S.cartOpen=false});if(!o.lines.length)return;
  if(!(o.cust.name||'').trim()||!normPhone(o.cust.phone||''))return alert('Customer name and phone number are required before payment.');
  let redeemPts=0;const phone=normPhone(o.cust.phone),cust=phone?rec(phone):null;const P=[];
  if(cust&&cust.b2b)o.interState=!!(cust.state&&cfg().homeState&&cust.state!==cfg().homeState);
@@ -403,9 +459,9 @@ function pay(){const o=S.cur;if(!o.lines.length)return;
   else if(m!='cash')a=Math.min(a,due());
   else{denoms={...cashDenom.vals};Object.keys(cashDenom.vals).forEach(k=>cashDenom.vals[k]=0);cashDenom.el.querySelectorAll('input').forEach(i=>i.value='')}
   if(a<=0)return;P.push(denoms?{m,amt:a,denoms}:{m,amt:a});up()};
- const done=h('button',{class:'p cta',disabled:true,onclick:async()=>{const dueNow=due();o.pays=P;o.redeemPts=redeemPts;o.change=Math.max(-dueNow,0);o.changeDenoms=dueNow<0?{...changeDenom.vals}:null;o.status='paid';o.paidAt=now();
+ const done=h('button',{class:'p cta',disabled:true,onclick:async()=>{const dueNow=due();o.pays=P;o.redeemPts=redeemPts;o.change=Math.max(-dueNow,0);o.changeDenoms=dueNow<0?{...changeDenom.vals}:null;o.status='paid';o.paidAt=now();o.short=o.short||uid().replace(/-/g,'').slice(0,10);
   if(cust&&cust.b2b)o.cust={...o.cust,gstin:cust.gstin||'',legalName:cust.legalName||'',address:cust.address||'',state:cust.state||''};
-  await persist();await adjustStock(o,-1);await applyLoyalty(o,cust,phone,redeemPts);await shopifySyncOrder(o);x();prn(rcpt(o));wa(o);S.cur=null;S.cartOpen=false;render()}},'Complete, print & send');
+  await persist(o);await adjustStock(o,-1);await applyLoyalty(o,cust,phone,redeemPts);await shopifySyncOrder(o);x();prn(rcpt(o));clearFn();render();invoiceCreatedPopup(o)}},'Complete, print & send');
  const x=modal(h('h3',{},'Pay '+inr(o.t.total)),custRow,redeemRow,
   cust&&cust.b2b?h('label',{},interState,' Inter-state sale (IGST instead of CGST+SGST)'):null,
   amt,cdw,
@@ -418,63 +474,127 @@ async function adjustStock(o,sign,moveType){const mtype=moveType||(o.type=='retu
  else{const it=rec(l.id);if(it&&it.track){await save('cafeitem',{...it,stock:Math.max(0,(it.stock||0)+sign*l.qty)},it.id);await logStock('cafe',it.id,it.name,mtype,sign*l.qty,o.no)}}}}
 async function hold(){const o=S.cur;if(!o.lines.length)return;if(!o.no)o.no=nextNo();o.status='held';await persist();S.cur=null;render()}
 function returnedQty(orderNo,dept,id){return L('order').filter(o=>o.type=='return'&&o.refNo==orderNo).reduce((a,o)=>a+o.lines.filter(l=>l.dept==dept&&l.id==id).reduce((s,l)=>s-l.qty,0),0)}
-async function doReturn(order,line,max){const v=prompt('Quantity to return (max '+max+')',max);const qn=Math.floor(+v);if(!(qn>0)||qn>max)return;const method=(prompt('Refund via cash/upi/card','cash')||'cash').toLowerCase();if(!['cash','upi','card'].includes(method))return alert('cash, upi or card');
- const amt=r2(line.price*qn*(1-(line.disc||0)/100));const ro={id:uid(),no:nextNo(),type:'return',refNo:order.no,lines:[{dept:line.dept,id:line.id,name:line.name,price:line.price,gst:line.gst||0,qty:-qn,disc:line.disc||0}],status:'paid',created:now(),by:S.user.id,cust:order.cust||{},paidAt:now(),pays:[{m:method,amt:-amt}]};
- ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);await audit('return',ro.no+' ref '+order.no+' qty '+qn+' amt '+amt);prn(rcpt(ro));render()}
+/* Return, per item/line (never the whole bill) with a proper denomination picker for a cash refund --
+   the old prompt()-based flow had no denomination breakdown at all, so a cash refund never showed up
+   in the live till. The refund denom goes on ro.changeDenoms (not pays[].denoms) so liveTillDenoms
+   subtracts it exactly once, the same way change-given-back on a sale already works. */
+function doReturn(order,line,max){const qtyF=h('input',{type:'number',value:max,placeholder:'Qty to return (max '+max+')'});
+ const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
+ const dp=denomPicker(()=>{});const cdw=h('div',{},h('p',{class:'hint'},'Refund handed back — count notes/coins:'),dp.el);
+ const x=modal(h('h3',{},'Return — '+esc(line.name)),h('p',{class:'hint'},'Only this item/line is returned, never the whole bill.'),qtyF,h('div',{class:'row'},'Refund via',method),cdw,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const qn=Math.floor(+qtyF.value);if(!(qn>0)||qn>max)return alert('Enter a valid quantity (max '+max+')');
+   const amt=r2(line.price*qn*(1-(line.disc||0)/100));
+   if(method.value=='cash'&&r2(dp.sum())<amt)return alert('Cash counted ('+inr(dp.sum())+') is less than the refund due ('+inr(amt)+').');
+   const denoms=method.value=='cash'?{...dp.vals}:null;
+   const ro={id:uid(),no:nextNo(),type:'return',refNo:order.no,lines:[{dept:line.dept,id:line.id,name:line.name,price:line.price,gst:line.gst||0,qty:-qn,disc:line.disc||0}],status:'paid',created:now(),by:S.user.id,cust:order.cust||{},paidAt:now(),pays:[{m:method.value,amt:-amt}],changeDenoms:denoms};
+   ro.t=tot(ro);await save('order',ro,ro.id);await adjustStock(ro,-1);await audit('return',ro.no+' ref '+order.no+' qty '+qn+' amt '+amt);x();prn(rcpt(ro));render()}},'Confirm return'),h('button',{onclick:()=>x()},'Cancel')))}
 /* table orders (from QR self-order) */
-function loadTorder(o){if(!S.cur)S.cur=newOrder();o.lines.forEach(l=>{const it=rec(l.id);for(let i=0;i<(l.qty||1);i++)addLine('cafe',l.id,l.name,l.price,it?it.gst||0:0)});save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='pos';render()})}
+function loadTorder(o){if(!S.curCafe)S.curCafe=newOrder();const oc=S.curCafe;o.lines.forEach(l=>{const it=rec(l.id);for(let i=0;i<(l.qty||1);i++)addLine('cafe',l.id,l.name,l.price,it?it.gst||0:0,oc)});if(o.tableName&&!oc.cust.name)oc.cust.tableTag=o.tableName;save('torder',{...o,status:'merged'},o.id).then(()=>{S.tab='orders';S.cartOpenCafe=true;render()})}
 function rejectTorder(o){save('torder',{...o,status:'rejected'},o.id).then(render)}
 /* views */
-V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.toLowerCase();const t=tot(o);const matchQ=(...f)=>f.some(x=>(x||'').toLowerCase().includes(q));
- const cats=L('cat').filter(c=>c.dept==S.dept).sort((a,b)=>a.n-b.n);if(!cats.some(c=>c.id==S.cat))S.cat=cats[0]&&cats[0].id;
- const itemsList=S.dept=='book'?L('book').filter(b=>(b.status||'active')!='inactive').filter(b=>q?matchQ(b.title,b.author,b.isbn):b.cat==S.cat).sort((a,b)=>a.title.localeCompare(b.title))
-  :S.dept=='cafe'?L('cafeitem').filter(i=>q?matchQ(i.name):i.cat==S.cat).sort((a,b)=>a.name.localeCompare(b.name))
-  :L('stationery').filter(i=>q?matchQ(i.name,i.sku):i.cat==S.cat).sort((a,b)=>a.name.localeCompare(b.name));
+/* Custom item: a product not in inventory (one-off), added as its own line every time (fresh id) since
+   its price is typed fresh each time rather than looked up. */
+function addCustomItemModal(){const o=S.cur;const name=h('input',{placeholder:'Item name'}),price=h('input',{type:'number',placeholder:'Price (incl. GST)'}),gst=h('input',{type:'number',placeholder:'GST %',value:0}),qtyF=h('input',{type:'number',placeholder:'Qty',value:1});
+ const x=modal(h('h3',{},'Custom item'),h('p',{class:'hint'},'For a product not in inventory — added just to this bill.'),name,price,gst,qtyF,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{if(!name.value.trim()||!(+price.value>0))return alert('Enter a name and a price');
+   o.lines.push({dept:'custom',id:uid(),name:name.value.trim(),price:+price.value,gst:+gst.value||0,qty:Math.max(1,Math.trunc(+qtyF.value)||1),disc:0});x();render()}},'Add to cart'),h('button',{onclick:()=>x()},'Cancel')))}
+/* Gift wrap: price is set by the cashier every time (varies by item/size), so it's also a fresh line
+   rather than a merge-on-repeat-tap addon like the complimentary bookmark/bag below. */
+function addGiftWrap(){const o=S.cur;const p=prompt('Gift wrap price');if(p==null)return;const price=+p;if(!(price>=0))return alert('Enter a valid price');
+ o.lines.push({dept:'addon',id:uid(),name:'Gift wrap',price,gst:0,qty:1,disc:0});render()}
+V.pos=()=>{const o=S.cur||(S.cur=newOrder());const q=S.q.trim().toLowerCase();const t=tot(o);const matchQ=(...f)=>f.some(x=>(x||'').toLowerCase().includes(q));
+ /* Search-to-add instead of browsing the whole catalog: cashier types a name/alias/ISBN and picks from
+    matches, across books and stationery together (no more switching department to search) -- the old
+    "show every item in the department" grid didn't scale and required a dept toggle first. */
+ const results=!q?[]:[
+  ...L('book').filter(b=>(b.status||'active')!='inactive').filter(b=>matchQ(b.title,b.author,b.isbn)).map(b=>({dept:'book',id:b.id,label:b.title,sub:b.author,price:b.price,gst:b.gst||0,stock:b.stock,reorder:b.reorder,coverUrl:b.coverUrl})),
+  ...L('stationery').filter(i=>matchQ(i.name,i.sku)).map(i=>({dept:'stat',id:i.id,label:i.name,sub:i.sku,price:i.price,gst:i.gst||0,stock:i.stock,reorder:i.reorder}))
+ ].slice(0,30);
  const itemBtn=(low,oos,onclick,...content)=>h('button',{class:oos?'oos':'',disabled:oos&&!can('m'),onclick},...content,low&&!oos?h('div',{class:'tag low'},'Low stock'):null,oos?h('div',{class:'tag'},'Out of stock'):null);
  const browse=h('div',{},
-  h('div',{class:'row'},...['book','cafe','stat'].map(d=>h('button',{class:(S.dept==d?'on':'')+' pill',onclick:()=>{S.dept=d;S.q='';render()}},DM[d].label))),
   h('div',{class:'search-row'},icon('scan',18),h('input',{placeholder:'Scan or type barcode/ISBN, Enter',onkeydown:e=>{if(e.key=='Enter'){scan(e.target.value);e.target.value=''}}})),
-  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search',value:S.q,oninput:e=>{S.q=e.target.value;render()}})),
-  h('div',{class:'row',style:'justify-content:flex-start'},...cats.map(c=>h('button',{class:((c.id==S.cat&&!q)?'on sm':'sm')+' pill',onclick:()=>{S.cat=c.id;S.q='';render()}},c.name))),
-  h('div',{class:'items'},...itemsList.map(it=>{const tracked=S.dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;const label=S.dept=='book'?it.title:it.name;
-   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(S.dept,it.id,label,it.price,it.gst||0)},it.coverUrl?h('img',{src:it.coverUrl,style:'width:100%;height:34px;object-fit:cover;border-radius:4px'}):null,h('b',{},label),S.dept=='book'&&it.author?h('small',{},it.author):null,h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
-  itemsList.length?null:h('p',{},cats.length||q?'No items here.':'Add categories and items in Inventory.'));
+  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search books & stationery by name, alias or ISBN',value:S.q,'data-focus-key':'q',oninput:e=>{S.q=e.target.value;render()}})),
+  h('div',{class:'row'},h('button',{class:'sm',onclick:addCustomItemModal},'+ Custom item (not in inventory)')),
+  h('div',{class:'items'},...results.map(it=>{const low=it.reorder!=null&&(it.stock||0)<=it.reorder,oos=(it.stock||0)<=0;
+   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine(it.dept,it.id,it.label,it.price,it.gst)},it.coverUrl?h('img',{src:it.coverUrl,style:'width:100%;height:34px;object-fit:cover;border-radius:4px'}):null,h('b',{},it.label),it.sub?h('small',{},it.sub):null,h('span',{class:'price'},inr(it.price)),h('small',{},'Stock '+(it.stock||0)))})),
+  q&&!results.length?h('p',{},'No matches for "'+esc(S.q)+'".'):null,
+  !q?h('p',{class:'empty-hint'},'Search by name, alias/SKU or ISBN above to add a book or stationery item.'):null);
  const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),o.no?h('small',{},o.no):null),
   ...o.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',h('span',{class:'tag tag-'+l.dept},(DM[l.dept]||{}).label||l.dept),l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1)},'+'),can('m')?h('button',{class:'sm',onclick:()=>lineDisc(l)},'%'):null),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
-  o.lines.length?null:h('p',{class:'empty-hint'},'Scan a barcode or tap an item to add it.'),
+  o.lines.length?null:h('p',{class:'empty-hint'},'Scan a barcode or search above to add an item.'),
+  h('div',{class:'row'},h('button',{class:'sm',onclick:()=>addLine('addon','bookmark','Complimentary bookmark',0,0)},'+ Bookmark (free)'),h('button',{class:'sm',onclick:()=>addLine('addon','bag','Complimentary carry bag',0,0)},'+ Carry bag (free)'),h('button',{class:'sm',onclick:addGiftWrap},'+ Gift wrap')),
   h('div',{class:'row'},h('input',{placeholder:'Customer name *',style:'width:48%',value:o.cust.name||'',oninput:e=>o.cust.name=e.target.value}),h('input',{placeholder:'Phone *',style:'width:48%',value:o.cust.phone||'',oninput:e=>o.cust.phone=e.target.value})),
   h('p',{class:'hint'},'* Required before payment.'),
   h('div',{class:'row'},h('button',{class:'sm',onclick:()=>custModal(o)},'Customer lookup')),
   h('div',{class:'row'},'Item total',inr(t.sub)),
   h('div',{class:'row'},h('span',{},'Discount ',can('m')?h('button',{class:'sm',onclick:()=>{const v=prompt('Order discount, like 10% or 50');if(v==null)return;o.disc=v?{t:v.includes('%')?'%':'flat',v:parseFloat(v)||0}:null;audit('order_discount',(o.no||'cart')+' -> '+v);render()}},'Set'):null),'-'+inr(t.d)),
   h('div',{class:'row'},h('small',{},'GST included'),h('small',{},inr(t.tax))),h('div',{class:'row'},h('b',{},'Total (GST incl.)'),h('b',{},inr(t.total))),
-  h('div',{class:'row'},h('button',{onclick:hold,disabled:!o.lines.length},'Hold'),h('button',{class:'p cta',onclick:pay,disabled:!o.lines.length},'Pay')),
+  h('div',{class:'row'},h('button',{onclick:hold,disabled:!o.lines.length},'Hold'),h('button',{class:'p cta',onclick:()=>pay(o),disabled:!o.lines.length},'Pay')),
   h('button',{onclick:async()=>{if(o.no&&o.status=='held'){if(!can('m'))return alert('Manager only');if(!confirm('Cancel held sale?'))return;o.status='void';await persist()}S.cur=null;render()}},'Clear sale'));
  const cartSheet=h('div',{class:'cartsheet'+(S.cartOpen?' open':'')},h('div',{class:'peek',onclick:()=>{S.cartOpen=!S.cartOpen;render()}},h('span',{class:'peek-lbl'},icon('cart',18),'Cart ('+o.lines.reduce((a,l)=>a+l.qty,0)+') · '+inr(t.total)),h('span',{},S.cartOpen?'▲':'▼')),cartBody);
- return h('div',{class:'g'},browse,cartSheet)};
-V.orders=()=>{const os=L('order').filter(o=>o.t).sort((a,b)=>b.created>a.created?1:-1),held=os.filter(o=>o.status=='held');
- return h('div',{},h('div',{class:'card'},h('h3',{},'Held sales ('+held.length+')'),...held.map(o=>h('div',{class:'row'},o.no+' · '+(o.cust.name||'walk-in'),h('b',{},inr(o.t.total)),h('button',{class:'p sm',onclick:()=>{S.cur=structuredClone(o);S.tab='pos';render()}},'Resume')))),
- h('div',{class:'card'},h('h3',{},'Recent bills'),...os.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},o.no+(o.status=='void'?' (void)':'')+(o.type=='return'?' (return)':''),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null)))))};
+ const held=L('order').filter(x=>x.status=='held'&&x.lines.some(l=>l.dept=='book'||l.dept=='stat'||l.dept=='custom'||l.dept=='addon'));
+ return h('div',{},h('div',{class:'g'},browse,cartSheet),
+  held.length?h('div',{class:'card'},h('h3',{},'Held sales ('+held.length+')'),...held.map(ho=>h('div',{class:'row'},ho.no+' · '+(ho.cust.name||'walk-in'),h('b',{},inr(ho.t.total)),h('button',{class:'p sm',onclick:()=>{S.cur=structuredClone(ho);render()}},'Resume')))):null)};
+/* Orders tab = cafe billing, entirely. Books & stationery bills live in Sell/Invoices -- "only cafe
+   order should be seen [here] and thier stais not books & stationary bill". Cafe billing itself now
+   happens here (search cafe items, cart, Pay -- same denomination/invoice-popup flow as Sell, just a
+   separate cart object S.curCafe so the two bill types never mix), table QR self-order management
+   (moved out of Inventory) and incoming table-scan orders live here too. */
+function cafeCustomItemModal(){const oc=S.curCafe;const name=h('input',{placeholder:'Item name'}),price=h('input',{type:'number',placeholder:'Price (incl. GST)'}),gst=h('input',{type:'number',placeholder:'GST %',value:5}),qtyF=h('input',{type:'number',placeholder:'Qty',value:1});
+ const x=modal(h('h3',{},'Custom cafe item'),name,price,gst,qtyF,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{if(!name.value.trim()||!(+price.value>0))return alert('Enter a name and a price');
+   oc.lines.push({dept:'cafe',id:uid(),name:name.value.trim(),price:+price.value,gst:+gst.value||0,qty:Math.max(1,Math.trunc(+qtyF.value)||1),disc:0});x();render()}},'Add to cart'),h('button',{onclick:()=>x()},'Cancel')))}
+V.orders=()=>{const oc=S.curCafe||(S.curCafe=newOrder());const q=(S.qCafe||'').trim().toLowerCase();const t=tot(oc);
+ const results=!q?L('cafeitem').sort((a,b)=>a.name.localeCompare(b.name)):L('cafeitem').filter(i=>i.name.toLowerCase().includes(q));
+ const itemBtn=(low,oos,onclick,...content)=>h('button',{class:oos?'oos':'',disabled:oos&&!can('m'),onclick},...content,low&&!oos?h('div',{class:'tag low'},'Low stock'):null,oos?h('div',{class:'tag'},'Out of stock'):null);
+ const browse=h('div',{},
+  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search cafe menu',value:S.qCafe||'','data-focus-key':'qCafe',oninput:e=>{S.qCafe=e.target.value;render()}})),
+  h('div',{class:'row'},h('button',{class:'sm',onclick:cafeCustomItemModal},'+ Custom item')),
+  h('div',{class:'items'},...results.map(it=>{const tracked=it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder,oos=tracked&&(it.stock||0)<=0;
+   return itemBtn(low,oos,()=>{if(oos&&!can('m'))return;addLine('cafe',it.id,it.name,it.price,it.gst||0,oc)},h('b',{},it.name),h('span',{class:'price'},inr(it.price)),tracked?h('small',{},'Stock '+(it.stock||0)):null)})),
+  results.length?null:h('p',{},'No cafe items match.'));
+ const cartBody=h('div',{class:'sheetbody'},h('div',{class:'order-hd'},h('h3',{},'Current Order'),oc.no?h('small',{},oc.no):null),
+  ...oc.lines.map(l=>h('div',{class:'row'},h('span',{},l.name+' ',l.disc?h('span',{class:'tag'},'-'+l.disc+'%'):null),h('span',{},h('button',{class:'sm',onclick:()=>qty(l,-1,oc)},'−'),' '+l.qty+' ',h('button',{class:'sm',onclick:()=>qty(l,1,oc)},'+')),h('b',{},inr(l.price*l.qty*(1-(l.disc||0)/100))))),
+  oc.lines.length?null:h('p',{class:'empty-hint'},'Search above or load a table order to add items.'),
+  h('div',{class:'row'},h('input',{placeholder:'Customer name *',style:'width:48%',value:oc.cust.name||'',oninput:e=>oc.cust.name=e.target.value}),h('input',{placeholder:'Phone *',style:'width:48%',value:oc.cust.phone||'',oninput:e=>oc.cust.phone=e.target.value})),
+  h('p',{class:'hint'},'* Required before payment.'),
+  h('div',{class:'row'},'Item total',inr(t.sub)),
+  h('div',{class:'row'},h('small',{},'GST included'),h('small',{},inr(t.tax))),h('div',{class:'row'},h('b',{},'Total (GST incl.)'),h('b',{},inr(t.total))),
+  h('div',{class:'row'},h('button',{class:'p cta',onclick:()=>pay(oc,()=>{S.curCafe=null;S.cartOpenCafe=false}),disabled:!oc.lines.length},'Pay')),
+  h('button',{onclick:()=>{S.curCafe=null;render()}},'Clear sale'));
+ const cartSheet=h('div',{class:'cartsheet'+(S.cartOpenCafe?' open':'')},h('div',{class:'peek',onclick:()=>{S.cartOpenCafe=!S.cartOpenCafe;render()}},h('span',{class:'peek-lbl'},icon('cart',18),'Cart ('+oc.lines.reduce((a,l)=>a+l.qty,0)+') · '+inr(t.total)),h('span',{},S.cartOpenCafe?'▲':'▼')),cartBody);
+ const pend=L('torder').filter(o=>o.status=='pending');const byTable={};pend.forEach(o=>{(byTable[o.table]=byTable[o.table]||[]).push(o)});
+ const tableOrdersCard=h('div',{class:'card'},h('h3',{},'Table orders ('+pend.length+')'),h('p',{class:'hint'},'From customers who scanned a table QR code. Load into the cafe cart to bill it, or reject it.'),
+  Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{class:'card',style:'margin:8px 0'},h('h4',{},esc(os[0].tableName||('Table '+tid))),
+   ...os.map(o=>h('div',{class:'row'},h('div',{},...o.lines.map(l=>h('div',{},l.qty+'x '+esc(l.name))),o.note?h('div',{class:'hint'},'Note: '+esc(o.note)):null),h('span',{},h('button',{class:'p sm',onclick:()=>loadTorder(o)},'Load into cart'),h('button',{class:'sm',onclick:()=>rejectTorder(o)},'Reject')))))):h('p',{},'No pending table orders.'));
+ const tables=L('table');
+ const tableMgmtCard=h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Cafe tables (QR self-order)'),h('button',{class:'p sm',onclick:()=>{const n=prompt('Table name/number, e.g. T1');n&&save('table',{name:n}).then(render)}},'Add table')),
+  ...tables.map(tb=>h('div',{class:'row'},tb.name,h('span',{},h('button',{class:'sm',onclick:()=>printTableQR(tb)},'Print QR'),h('button',{class:'sm',onclick:()=>confirm('Delete table?')&&save('table',tb,tb.id,true).then(render)},'Delete')))));
+ const cafeOrders=L('order').filter(o=>o.t&&o.lines.length&&o.lines.every(l=>l.dept=='cafe')).sort((a,b)=>b.created>a.created?1:-1);
+ const held=cafeOrders.filter(o=>o.status=='held');
+ const recentCard=h('div',{class:'card'},h('h3',{},'Recent cafe bills'),...cafeOrders.filter(o=>o.status!='held').slice(0,30).map(o=>h('div',{class:'row'},o.no+(o.status=='void'?' (void)':'')+(o.type=='return'?' (return)':''),h('b',{},inr(o.t.total)),h('span',{},h('button',{class:'sm',onclick:()=>prn(rcpt(o))},'Receipt'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Invoice'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'),can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null))));
+ return h('div',{},h('div',{class:'g'},browse,cartSheet),
+  held.length?h('div',{class:'card'},h('h3',{},'Held cafe sales ('+held.length+')'),...held.map(o=>h('div',{class:'row'},o.no+' · '+(o.cust.name||'walk-in'),h('b',{},inr(o.t.total)),h('button',{class:'p sm',onclick:()=>{S.curCafe=structuredClone(o);render()}},'Resume')))):null,
+  tableOrdersCard,tableMgmtCard,recentCard)};
 /* Invoices tab: dedicated invoice lookup/reprint/resend, separate from the day-to-day "Recent bills" in
    Orders -- search any past paid bill by invoice no, customer name or phone, see it, print the A4
    invoice (customizable via Settings > Invoice template) or resend it on WhatsApp. */
-V.invoices=()=>{const q=(S.invQ||'').toLowerCase();const paid=L('order').filter(o=>o.status=='paid').sort((a,b)=>b.paidAt>a.paidAt?1:-1);
+/* Card-per-invoice layout (per reference): Invoice no + date, Client, Total, then Send/Open/Void --
+   instead of a plain table. */
+V.invoices=()=>{const q=(S.invQ||'').toLowerCase();const paid=L('order').filter(o=>o.status=='paid'||o.status=='void').sort((a,b)=>b.paidAt>a.paidAt?1:-1);
  const shown=q?paid.filter(o=>(o.no||'').toLowerCase().includes(q)||(o.cust.name||'').toLowerCase().includes(q)||(o.cust.phone||'').includes(q)):paid.slice(0,40);
- return h('div',{},h('div',{class:'card'},h('h3',{},'Invoices'),h('p',{class:'hint'},'Look up, print or resend any past invoice. Customize the invoice template (logo, colour, footer) in Settings.'),
-  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search invoice no, customer name or phone',value:S.invQ||'',oninput:e=>{S.invQ=e.target.value;render()}}))),
- h('div',{class:'card'},h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Invoice'),h('th',{},'Customer'),h('th',{},'Date'),h('th',{},'Total'),h('th',{})),
-  ...shown.map(o=>h('tr',{},
-   h('td',{class:'p1','data-label':'Invoice'},o.no+(o.type=='return'?' (return)':'')),
-   h('td',{class:'p2','data-label':'Customer'},(o.cust.name||'walk-in')+' · '+(o.cust.phone||'')+' · '+new Date(o.paidAt).toLocaleDateString()+' · '+inr(o.t.total)),
-   h('td',{'data-label':'Customer'},o.cust.name||'walk-in'),h('td',{'data-label':'Date'},new Date(o.paidAt).toLocaleDateString()),h('td',{'data-label':'Total'},inr(o.t.total)),
-   h('td',{},h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Print'),h('button',{class:'sm',onclick:()=>wa(o)},'WhatsApp'))))),
-  !shown.length?h('p',{},q?'No invoice matches "'+esc(S.invQ)+'".':'No invoices yet.'):null))};
-V.torders=()=>{const pend=L('torder').filter(o=>o.status=='pending');const byTable={};pend.forEach(o=>{(byTable[o.table]=byTable[o.table]||[]).push(o)});
- return h('div',{class:'card'},h('h3',{},'Table orders ('+pend.length+')'),h('p',{class:'hint'},'From customers who scanned a table QR code. Load an order into the cart to bill it, or reject it.'),
-  Object.keys(byTable).length?Object.entries(byTable).map(([tid,os])=>h('div',{class:'card',style:'margin:8px 0'},h('h4',{},esc(os[0].tableName||('Table '+tid))),
-   ...os.map(o=>h('div',{class:'row'},h('div',{},...o.lines.map(l=>h('div',{},l.qty+'x '+esc(l.name))),o.note?h('div',{class:'hint'},'Note: '+esc(o.note)):null),h('span',{},h('button',{class:'p sm',onclick:()=>loadTorder(o)},'Load into cart'),h('button',{class:'sm',onclick:()=>rejectTorder(o)},'Reject')))))):h('p',{},'No pending table orders.'))};
+ return[h('div',{class:'card'},h('h3',{},'Invoices'),h('p',{class:'hint'},'Look up, print or resend any past invoice. Customize the invoice template (logo, colour, footer) in Settings.'),
+  h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search invoice no, customer name or phone',value:S.invQ||'','data-focus-key':'invQ',oninput:e=>{S.invQ=e.target.value;render()}}))),
+ ...shown.map(o=>h('div',{class:'card'},
+  h('div',{class:'hint'},'Invoice'),h('div',{style:'font-weight:700;font-size:15px'},o.no+(o.type=='return'?' (return)':''),h('span',{class:'hint'},' · '+new Date(o.paidAt).toLocaleDateString())),
+  h('div',{class:'hint'},'Client'),h('div',{},esc(o.cust.name||'walk-in')+' · '+(o.cust.phone||'')),
+  h('div',{class:'row'},h('span',{class:'hint'},'Total'),h('b',{},inr(o.t.total))),
+  o.status=='void'?h('span',{class:'tag'},'Void'):null,
+  h('div',{class:'row'},h('button',{class:'sm',onclick:()=>wa(o)},'Send'),h('button',{class:'sm',onclick:()=>prnA4(inv(o))},'Open'),
+   can('m')&&o.status=='paid'&&o.type!='return'?h('button',{class:'sm',style:'color:#b3261e;border-color:#b3261e',onclick:async()=>{if(!confirm('Void '+o.no+'?'))return;const c=structuredClone(o);c.status='void';await save('order',c,c.id);await adjustStock(c,1,'adjustment');await audit('void_order',o.no+' total '+o.t.total);render()}},'Void'):null))),
+ !shown.length?h('p',{},q?'No invoice matches "'+esc(S.invQ)+'".':'No invoices yet.'):null]};
 V.returns=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const ord=L('order').find(o=>o.no==S.ret&&o.status=='paid'&&o.type!='return');
- return h('div',{class:'card'},h('h3',{},'Find a bill to return / exchange'),h('div',{class:'row'},h('input',{placeholder:'Invoice number, e.g. INV-AB-0001',value:S.ret,oninput:e=>{S.ret=e.target.value;render()}})),
+ return h('div',{class:'card'},h('h3',{},'Find a bill to return / exchange'),h('div',{class:'row'},h('input',{placeholder:'Invoice number, e.g. INV-AB-0001',value:S.ret,'data-focus-key':'ret',oninput:e=>{S.ret=e.target.value;render()}})),
   !S.ret?null:!ord?h('p',{},'No paid bill found for "'+esc(S.ret)+'".'):h('div',{},h('p',{},ord.no+' · '+new Date(ord.paidAt).toLocaleString()+' · '+esc((ord.cust||{}).name||'')),...ord.lines.map(l=>{const done=returnedQty(ord.no,l.dept,l.id),left=l.qty-done;return h('div',{class:'row'},l.name+' ('+l.qty+' sold, '+done+' returned)',left>0?h('button',{class:'p sm',onclick:()=>doReturn(ord,l,left)},'Return'):h('span',{class:'tag'},'fully returned'))})))};
 function csvEsc(v){v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function toCSV(rows){return rows.map(r=>r.map(csvEsc).join(',')).join('\r\n')}
@@ -515,7 +635,6 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
  rentedToday.forEach(r=>(r.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt));returnedToday.forEach(r=>(r.refundPays||[]).forEach(p=>m[p.m]=(m[p.m]||0)-p.amt));memToday.forEach(mm=>(mm.pays||[]).forEach(p=>m[p.m]=(m[p.m]||0)+p.amt));
  const byRateDay={};os.forEach(o=>Object.entries(o.t.byRate||{}).forEach(([rt,a])=>byRateDay[rt]=r2((byRateDay[rt]||0)+a)));
  const et=r2(ex.reduce((a,e)=>a+e.amt,0)),ecat=h('select',{},...EXP_CATS.map(c=>h('option',{value:c},c))),ec=h('input',{placeholder:'Description'}),ea=h('input',{type:'number',placeholder:'Amount'}),R_=(a,b)=>h('div',{class:'row'},a,h('b',{},b));
- const lowBooks=L('book').filter(b=>b.reorder!=null&&(b.stock||0)<=b.reorder),lowCafe=L('cafeitem').filter(i=>i.track&&i.reorder!=null&&(i.stock||0)<=i.reorder),lowStat=L('stationery').filter(i=>i.reorder!=null&&(i.stock||0)<=i.reorder);
  const from=S.rf||S.d,to=S.rt||S.d,ro=rangeOrders(from,to);const trend={};ro.forEach(o=>{const d=o.paidAt.slice(0,10);trend[d]=r2((trend[d]||0)+o.t.total)});const trendMax=Math.max(1,...Object.values(trend));
  const best={};ro.forEach(o=>o.lines.forEach(l=>{const k=l.dept+'|'+l.name,net=r2(l.price*l.qty*(1-(l.disc||0)/100));(best[k]=best[k]||{qty:0,rev:0,dept:l.dept,name:l.name}).qty+=l.qty;best[k].rev=r2(best[k].rev+net)}));
  const bestArr=Object.values(best).sort((a,b)=>b.rev-a.rev).slice(0,10);
@@ -539,7 +658,6 @@ V.rep=()=>{const os=L('order').filter(o=>o.status=='paid'&&new Date(o.paidAt).to
  h('div',{class:'card'},h('h3',{},'Add expense'),h('div',{class:'row'},ecat,ec,ea,h('button',{onclick:async()=>{if(!(+ea.value>0))return;await save('exp',{cat:ecat.value,note:ec.value,amt:+ea.value,d:S.d});render()}},'Add')),
   ...ex.map(e=>h('div',{class:'row'},(e.cat?'['+e.cat+'] ':'')+(e.note||''),inr(e.amt)))),
  h('div',{class:'card'},h('h3',{},'Items sold today'),h('table',{class:'rtable'},...Object.entries(it).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>h('tr',{},h('td',{'data-label':'Item'},k),h('td',{'data-label':'Qty'},v.q),h('td',{'data-label':'Amount'},inr(v.a)))))),
- h('div',{class:'card'},h('h3',{},'Low stock'),...lowBooks.map(b=>h('div',{class:'row'},b.title+' (book)',h('b',{class:'low'},b.stock||0))),...lowCafe.map(i=>h('div',{class:'row'},i.name+' (cafe)',h('b',{class:'low'},i.stock||0))),...lowStat.map(i=>h('div',{class:'row'},i.name+' (stationery)',h('b',{class:'low'},i.stock||0))),(lowBooks.length+lowCafe.length+lowStat.length)?null:h('p',{},'Nothing low.')),
  can('m')?stockAdjCard():null,
  h('div',{class:'card'},h('h3',{},'Range report & exports'),h('div',{class:'row'},h('input',{type:'date',value:from,onchange:e=>{S.rf=e.target.value;render()}}),h('input',{type:'date',value:to,onchange:e=>{S.rt=e.target.value;render()}})),
   R_('Bills',ro.length),R_('Sales',inr(r2(ro.reduce((a,o)=>a+o.t.total,0)))),R_('Tax collected',inr(r2(ro.reduce((a,o)=>a+o.t.tax,0)))),R_('Est. profit (revenue − cost)',inr(r2(revTot-costTot))),
@@ -589,198 +707,30 @@ function liveTillDenoms(openAt,openDenoms){const denoms={...(openDenoms||{})};
  return denoms}
 function denomModal(title,onSave){const dp=denomPicker(()=>{totEl.textContent=inr(dp.sum())});const totEl=h('b',{},inr(0));const note=h('input',{placeholder:'Note (optional)'});
  const x=modal(h('h3',{},title),dp.el,h('div',{class:'row'},'Total',totEl),note,h('div',{class:'actions'},h('button',{class:'p',onclick:()=>{onSave(dp.vals,dp.sum(),note.value);x()}},'Save'),h('button',{onclick:()=>x()},'Cancel')))}
+/* Closing the drawer now names exactly which denomination(s) are short/excess vs the live till (not
+   just one total variance figure), and blocks the close until the cashier enters a reason if anything
+   doesn't match -- both requested directly: "tell cashier for why its missing" + "which note or coin
+   and qty is missing". */
+function closeShiftModal(last){const expectedDenoms=liveTillDenoms(last.at,last.denoms);const totEl=h('b',{},inr(0));
+ const diffEl=h('div');const note=h('input',{placeholder:'Reason for the difference (required if any denomination is off)'});
+ const refreshDiff=()=>{const rows=DENOMS.map(d=>{const exp=expectedDenoms[d.v]||0,cnt=dp.vals[d.v]||0,diff=cnt-exp;
+   return diff?h('div',{class:'row'},'₹'+d.v,h('b',{class:diff<0?'low':''},(diff>0?'+':'')+diff+' (expected '+exp+', counted '+cnt+')')):null}).filter(Boolean);
+  diffEl.replaceChildren(...rows.length?rows:[h('p',{class:'hint'},'Matches the live till exactly.')])};
+ const dp=denomPicker(()=>{totEl.textContent=inr(dp.sum());refreshDiff()});refreshDiff();
+ const x=modal(h('h3',{},'Count drawer — closing count'),dp.el,h('div',{class:'row'},'Total',totEl),h('h4',{},'Difference vs live till, by denomination'),diffEl,note,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const total=dp.sum(),exp=expectedCash(last.at,last.total),variance=r2(total-exp);
+    if(variance&&!note.value.trim())return alert('There is a cash variance of '+inr(variance)+' — enter a reason before closing.');
+    await save('shift',{type:'close',at:now(),by:S.user.id,denoms:dp.vals,total,expected:exp,variance,note:note.value.trim()});x();alert('Expected '+inr(exp)+' · Counted '+inr(total)+' · Variance '+inr(variance));render()}},'Close shift'),h('button',{onclick:()=>x()},'Cancel')))}
 V.shift=()=>{const open=shiftIsOpen(),last=lastShift(),hist=L('shift').sort((a,b)=>b.at>a.at?1:-1).slice(0,20);
  const till=open?liveTillDenoms(last.at,last.denoms):null,tillTotal=till?DENOMS.reduce((a,d)=>a+(till[d.v]||0)*d.v,0):0;
  return h('div',{},h('div',{class:'card'},h('h3',{},'Shift / drawer'),h('p',{},open?'Shift open since '+new Date(last.at).toLocaleString()+' · Opening float '+inr(last.total):'No open shift.'),
   h('div',{class:'row'},!open?h('button',{class:'p',onclick:()=>denomModal('Opening float — count the till',async(denoms,total,note)=>{await save('shift',{type:'open',at:now(),by:S.user.id,denoms,total,note});render()})},'Open shift')
-   :h('button',{class:'p',onclick:()=>denomModal('Count drawer — closing count',async(denoms,total,note)=>{const exp=expectedCash(last.at,last.total),variance=r2(total-exp);await save('shift',{type:'close',at:now(),by:S.user.id,denoms,total,expected:exp,variance,note});alert('Expected '+inr(exp)+' · Counted '+inr(total)+' · Variance '+inr(variance));render()})},'Count drawer / Close shift'))),
+   :h('button',{class:'p',onclick:()=>closeShiftModal(last)},'Count drawer / Close shift'))),
  open?h('div',{class:'card'},h('h3',{},'Live till (since shift open)'),h('p',{class:'hint'},'Running note/coin breakdown from the opening float plus every cash tender and change given since — a live estimate, not a substitute for counting at close.'),
   h('div',{class:'denoms'},...DENOMS.map(d=>h('div',{},h('div',{class:'hint'},'₹'+d.v),h('b',{},till[d.v]||0)))),
   h('div',{class:'row'},h('b',{},'Till total'),h('b',{},inr(tillTotal)))):null,
  h('div',{class:'card'},h('h3',{},'Shift history'),h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Type'),h('th',{},'Total'),h('th',{},'Variance')),
   ...hist.map(s=>h('tr',{},h('td',{'data-label':'When'},new Date(s.at).toLocaleString()),h('td',{'data-label':'Type'},s.type),h('td',{'data-label':'Total'},inr(s.total)),h('td',{'data-label':'Variance'},s.type=='close'?inr(s.variance):'—'))))))};
-/* suppliers & purchase orders */
-function supForm(s){const f={name:h('input',{value:s.name||'',placeholder:'Name'}),phone:h('input',{value:s.phone||'',placeholder:'Phone'}),email:h('input',{value:s.email||'',placeholder:'Email'}),addr:h('input',{value:s.addr||'',placeholder:'Address'}),notes:h('input',{value:s.notes||'',placeholder:'Notes'}),
-  gstin:h('input',{value:s.gstin||'',placeholder:'GSTIN'}),legalName:h('input',{value:s.legalName||'',placeholder:'Legal / trade name'}),state:h('input',{value:s.state||'',placeholder:'State (auto-filled from GSTIN)'}),
-  creditDays:h('input',{type:'number',value:s.creditDays??'',placeholder:'Credit period (days, optional)'})};
- const gstNote=h('p',{class:'hint'},'');
- const fetchBtn=h('button',{class:'sm',onclick:async()=>{const d=gstinDecode(f.gstin.value);if(!d.fmtOk){gstNote.textContent='That does not look like a valid GSTIN format.';return}
-  f.state.value=d.stateName||d.stateCode;gstNote.textContent=(d.checksumOk?'Format + checksum valid. ':'Format valid but checksum looks off. ')+'State derived from GSTIN format.';
-  const live=await gstinLookup(f.gstin.value);if(live){f.legalName.value=live.legalName||live.tradeName||f.legalName.value;gstNote.textContent+=' Name fetched from the configured verification API.'}
-  else if(!cfg().gstinApiKey)gstNote.textContent+=' Add a GSTIN verification API key in Settings to auto-fetch business name & address.'}},'Fetch details');
- const x=modal(h('h3',{},s.id?'Edit supplier':'New supplier'),f.name,f.phone,f.email,f.addr,f.notes,h('h4',{},'GST / B2B details'),h('div',{class:'row'},f.gstin,fetchBtn),f.legalName,f.state,gstNote,
-  h('h4',{},'Payment terms'),f.creditDays,h('p',{class:'hint'},'Informational only — used to flag an overdue balance on the supplier statement, not enforced anywhere.'),
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value)return alert('Name required');await save('supplier',{...s,name:f.name.value.trim(),phone:f.phone.value.trim(),email:f.email.value.trim(),addr:f.addr.value.trim(),notes:f.notes.value.trim(),gstin:f.gstin.value.trim().toUpperCase(),legalName:f.legalName.value.trim(),state:f.state.value.trim(),creditDays:f.creditDays.value===''?null:+f.creditDays.value},s.id);x();render()}},'Save'),s.id?h('button',{onclick:async()=>{await save('supplier',s,s.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
-function supNameOf(id){const s=id&&rec(id);return s?s.name:''}
-/* Purchase Bill entry (Busy Accounting-style): header = party + supplier's own invoice no/date (distinct
-   from this app's internal PO-... id); each line captures Name, Alias/ISBN, Category/section, Unit, GST%
-   itemwise (5/8/12/18 presets + free custom, per the owner's own list -- not "corrected" to the textbook
-   0/5/12/18/28 slabs, since we don't know if 8% is deliberate), Selling price, Purchase price, MRP -- for
-   either an existing catalog item (autofilled, still editable since prices legitimately change bill to
-   bill) or a brand-new item created inline (a real bill often includes fresh stock not yet in the catalog).
-   Confirming the bill immediately receives every line (stock + stockmove + payable), reusing receiveLine
-   the same way the old "Receive" button did, rather than leaving it as a separate partial-receive step --
-   that matches how a bill is actually entered here: after the goods are already in hand. */
-const GST_PRESETS=[5,8,12,18];
-function poForm(){const supSel=h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id},s.name)));
- const billNo=h('input',{placeholder:"Supplier's bill / invoice no."}),billDate=h('input',{type:'date',value:new Date().toLocaleDateString('en-CA')});
- const existing=[...L('book').map(b=>({dept:'book',id:b.id,name:b.title,alias:b.isbn||'',cat:b.cat,unit:b.unit||'pcs',gst:0,sell:b.price||0,cost:b.cost||0,mrp:b.mrp??''})),
-                 ...L('stationery').map(s=>({dept:'stat',id:s.id,name:s.name,alias:s.sku||'',cat:s.cat,unit:s.unit||'pcs',gst:s.gst||0,sell:s.price||0,cost:s.cost||0,mrp:s.mrp??''}))];
- const itemSel=h('select',{},h('option',{value:''},'+ Add new item'),...existing.map(it=>h('option',{value:it.dept+':'+it.id},(DM[it.dept]||{}).label+' — '+it.name)));
- const deptSel=h('select',{},...['book','stat'].map(d=>h('option',{value:d},DM[d].label)));
- const catSel=h('select',{});
- const rebuildCats=()=>{const d=deptSel.value;catSel.replaceChildren(h('option',{value:''},'No category'),...L('cat').filter(c=>c.dept==d).map(c=>h('option',{value:c.id},c.name)))};
- const nameF=h('input',{placeholder:'Name'}),aliasF=h('input',{placeholder:'Alias / ISBN / SKU'}),newCatF=h('input',{placeholder:'Or type a new category'}),unitF=h('input',{value:'pcs',placeholder:'Unit'});
- const gstSel=h('select',{},...GST_PRESETS.map(g=>h('option',{value:g},g+'%')),h('option',{value:'custom'},'Custom'));
- const gstCustom=h('input',{type:'number',placeholder:'Custom GST %',style:'display:none'});
- gstSel.onchange=()=>{gstCustom.style.display=gstSel.value=='custom'?'':'none'};
- const sellF=h('input',{type:'number',placeholder:'Selling price (incl. GST)'}),costF=h('input',{type:'number',placeholder:'Purchase price'}),mrpF=h('input',{type:'number',placeholder:'MRP'}),qtyF=h('input',{type:'number',placeholder:'Qty received',value:1});
- const genAliasBtn=h('button',{class:'sm',onclick:()=>{if(!nameF.value.trim())return alert('Enter a name first');aliasF.value=genCode(deptSel.value=='book'?'BK':'ST');printBarcode(aliasF.value,nameF.value.trim())}},'Generate & print barcode');
- const gstRow=h('div',{class:'row'},'GST%',gstSel,gstCustom);
- const deptRow=h('div',{class:'row'},'Department',deptSel);
- const aliasRow=h('div',{class:'row'},aliasF,genAliasBtn);
- const setBookMode=isBook=>{gstRow.style.display=isBook?'none':'';if(isBook){gstSel.value=5;gstCustom.style.display='none'}};
- deptSel.onchange=()=>{rebuildCats();setBookMode(deptSel.value=='book')};
- const resetNewFields=()=>{deptSel.disabled=false;deptSel.value='book';rebuildCats();setBookMode(true);nameF.value='';aliasF.value='';newCatF.value='';unitF.value='pcs';gstSel.value=5;gstCustom.value='';gstCustom.style.display='none';sellF.value='';costF.value='';mrpF.value='';qtyF.value=1;genAliasBtn.style.display=''};
- itemSel.onchange=()=>{if(!itemSel.value){resetNewFields();return}
-  const[dept,id]=itemSel.value.split(':');const it=existing.find(x=>x.dept==dept&&x.id==id);if(!it)return;
-  deptSel.value=dept;deptSel.disabled=true;rebuildCats();setBookMode(dept=='book');catSel.value=it.cat||'';
-  nameF.value=it.name;aliasF.value=it.alias;newCatF.value='';unitF.value=it.unit;
-  if(dept=='book'){gstSel.value=5;gstCustom.value='';gstCustom.style.display='none'}
-  else if(GST_PRESETS.includes(it.gst)){gstSel.value=it.gst;gstCustom.value='';gstCustom.style.display='none'}
-  else{gstSel.value='custom';gstCustom.value=it.gst;gstCustom.style.display=''}
-  sellF.value=it.sell;costF.value=it.cost;mrpF.value=it.mrp;qtyF.value=1;genAliasBtn.style.display='none'};
- resetNewFields();
- let lines=[];const linesEl=h('div'),linesHdr=h('h4',{},'Lines (0)');
- const catNameFor=(dept,catId,newCat)=>newCat?newCat:(catId?catNameOf(catId):'—');
- const refresh=()=>{linesHdr.textContent='Lines ('+lines.length+')';linesEl.replaceChildren(...lines.map((l,i)=>h('div',{class:'row'},
-   h('span',{},esc(l.name)+' ',h('span',{class:'tag tag-'+l.dept},(DM[l.dept]||{}).label),l.isNew?h('span',{class:'tag'},'new item'):null,
-    h('br'),h('small',{},(l.alias?'Alias '+esc(l.alias)+' · ':'')+catNameFor(l.dept,l.catId,l.newCat)+' · '+esc(l.unit)+' · GST '+l.gst+'%')),
-   h('span',{},l.qty+' @ '+inr(l.cost)+' (sell '+inr(l.sell)+(l.mrp!=null&&l.mrp!==''?', MRP '+inr(l.mrp):'')+')'),
-   h('button',{class:'sm',onclick:()=>{lines.splice(i,1);refresh()}},'x'))));
-  if(!lines.length)linesEl.append(h('p',{class:'hint'},'No lines added yet.'))};
- refresh();
- const addLineBtn=h('button',{class:'p sm',onclick:()=>{
-  if(!nameF.value.trim())return alert('Enter an item name');
-  const qty=+qtyF.value;if(!(qty>0))return alert('Enter a qty received > 0');
-  const cost=+costF.value||0,sell=+sellF.value||0,mrp=mrpF.value===''?null:+mrpF.value;
-  const dept=deptSel.value,gst=dept=='book'?0:(gstSel.value=='custom'?(+gstCustom.value||0):+gstSel.value);
-  lines.push({isNew:!itemSel.value,itemId:itemSel.value?itemSel.value.split(':')[1]:null,dept,name:nameF.value.trim(),alias:aliasF.value.trim(),catId:catSel.value||null,newCat:newCatF.value.trim(),unit:unitF.value.trim()||'pcs',gst,sell,cost,mrp,qty});
-  itemSel.value='';resetNewFields();refresh()}},'Add line');
- const x=modal(h('h3',{},'New purchase bill'),
-  h('h4',{},'Party & bill details'),supSel,h('div',{class:'row'},billNo,billDate),
-  h('h4',{},'Add a line'),itemSel,deptRow,nameF,aliasRow,h('div',{class:'row'},catSel,newCatF),unitF,gstRow,h('div',{class:'row'},sellF,costF,mrpF),qtyF,addLineBtn,
-  linesHdr,linesEl,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!lines.length)return alert('Add at least one line');
-   const finalLines=[];
-   for(const ln of lines){
-    let catId=ln.catId;
-    if(ln.newCat){const c=await save('cat',{name:ln.newCat,dept:ln.dept,n:Date.now()});catId=c.id}
-    const kind=DEPT_KIND[ln.dept];let itemId,itemName;
-    if(ln.isNew){
-     const base=ln.dept=='book'
-      ?{title:ln.name,author:'',publisher:'',isbn:ln.alias,cat:catId||null,unit:ln.unit,cost:ln.cost,mrp:ln.mrp,price:ln.sell,stock:0,reorder:2,gst:0}
-      :{name:ln.name,cat:catId||null,unit:ln.unit,price:ln.sell,cost:ln.cost,gst:ln.gst,mrp:ln.mrp,track:true,sku:ln.alias,stock:0,reorder:5};
-     const r_=await save(kind,base);itemId=r_.id;itemName=ln.name}
-    else{
-     const it=rec(ln.itemId);itemId=ln.itemId;itemName=ln.name;
-     const upd={...it,cat:catId||(it&&it.cat)||null,unit:ln.unit,cost:ln.cost,mrp:ln.mrp,price:ln.sell};
-     if(ln.dept=='book')upd.isbn=ln.alias;else{upd.sku=ln.alias;upd.gst=ln.gst}
-     await save(kind,upd,itemId)}
-    finalLines.push({dept:ln.dept,itemId,name:itemName,qty:ln.qty,cost:ln.cost,received:0})}
-   const saved=await save('po',{no:'PO-'+Date.now().toString(36).toUpperCase(),billNo:billNo.value.trim(),billDate:billDate.value||new Date().toLocaleDateString('en-CA'),supplier:supSel.value||null,lines:finalLines,status:'ordered',created:now(),by:S.user.id,payments:[]});
-   const po=saved.data;// save() returns the wrapped {id,kind,data,...} record; receiveLine works on flat data like every other caller (rec()/L())
-   for(let i=0;i<finalLines.length;i++)await receiveLine(po,i,finalLines[i].qty,true);
-   x();render()}},'Save purchase bill'),h('button',{onclick:()=>x()},'Cancel')))}
-async function receiveLine(po,i,q,silent){const l=po.lines[i];q=Math.max(0,Math.min(q,l.qty-(l.received||0)));if(!q)return;
- const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=(it.stock||0)+q;it.cost=l.cost;await save(kind,it,it.id);await logStock(l.dept,it.id,it.name||it.title,'purchase',q,po.no)}
- l.received=(l.received||0)+q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':'partial';
- po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);if(!silent)render()}
-/* supplier outstanding: PO payable auto = sum(received qty * cost per line); a legacy "record payment"
-   (recordPoPayment, still available per-bill from the ledger) logs against po.payments[] --
-   outstanding = payable - sum(payments), aggregated per supplier below */
-function poOutstanding(po){return r2((po.payable||0)-(po.payments||[]).reduce((a,p)=>a+p.amt,0))}
-function recordPoPayment(po){const v=prompt('Payment amount (outstanding '+inr(poOutstanding(po))+')');const a=+v;if(!(a>0))return;
- po.payments=po.payments||[];po.payments.push({amt:a,at:now(),by:S.user.id});save('po',po,po.id).then(()=>{audit('supplier_payment',po.no+' '+inr(a));render()})}
-/* Data-model choice for payments (Busy-style restructuring, judgment call, documented): a real shop
-   pays down its running balance with a supplier on a credit-period cycle, not bill-by-bill -- the
-   owner's own words ("payment sent to party as per credit period time") describe paying against the
-   account, not settling one specific invoice. So the primary payment record is now SUPPLIER-level
-   (kind:'suppayment', keyed to supplier.id, never to one po/bill), alongside the legacy per-PO
-   po.payments[] path above (kept for backward compatibility with data already recorded that way).
-   Outstanding for a supplier = sum(payable across all their bills) - sum(legacy po.payments) -
-   sum(suppayment). Mode-specific reference fields (UTR for UPI, cheque no/date for Cheque, a bank
-   transaction ref for Bank transfer) live directly on the suppayment record. */
-function supPaymentsFor(supplierId){return L('suppayment').filter(p=>p.supplier==supplierId).sort((a,b)=>b.at>a.at?1:-1)}
-function supplierOutstanding(supplierId){const pos=L('po').filter(po=>po.supplier==supplierId);
- const payable=r2(pos.reduce((a,po)=>a+(po.payable||0),0));
- const legacyPaid=r2(pos.reduce((a,po)=>a+(po.payments||[]).reduce((s,p)=>s+p.amt,0),0));
- const supPaid=r2(supPaymentsFor(supplierId).reduce((a,p)=>a+p.amt,0));
- return r2(payable-legacyPaid-supPaid)}
-function oldestUnpaidBillDate(supplierId){const pos=L('po').filter(po=>po.supplier==supplierId&&poOutstanding(po)>0);
- const dates=pos.map(po=>po.billDate||po.created.slice(0,10)).sort();return dates[0]||null}
-const PAY_MODES={cash:'Cash',upi:'UPI',cheque:'Cheque',bank:'Bank transfer',other:'Other'};
-function recordSupplierPayment(s){const outstanding=supplierOutstanding(s.id);
- const amt=h('input',{type:'number',placeholder:'Amount paid',value:outstanding>0?outstanding:''}),date=h('input',{type:'date',value:new Date().toLocaleDateString('en-CA')});
- const mode=h('select',{},...Object.entries(PAY_MODES).map(([k,v])=>h('option',{value:k},v)));
- const utr=h('input',{placeholder:'UPI UTR number'}),chequeNo=h('input',{placeholder:'Cheque number'}),chequeDate=h('input',{type:'date'}),bankRef=h('input',{placeholder:'Bank transaction reference'}),note=h('input',{placeholder:'Note (optional)'});
- const refWrap=h('div');
- const refreshRef=()=>refWrap.replaceChildren(
-  mode.value=='upi'?h('div',{class:'row'},utr):null,
-  mode.value=='cheque'?h('div',{class:'row'},chequeNo,h('label',{},'Cheque date',chequeDate)):null,
-  mode.value=='bank'?h('div',{class:'row'},bankRef):null);
- mode.onchange=refreshRef;refreshRef();
- const x=modal(h('h3',{},'Record payment — '+esc(s.name)),
-  h('div',{},'Outstanding balance: '+inr(outstanding)),
-  h('div',{class:'row'},amt,date),h('div',{class:'row'},'Mode',mode),refWrap,note,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const a=+amt.value;if(!(a>0))return alert('Enter a valid amount');
-   if(mode.value=='upi'&&!utr.value.trim())return alert('Enter the UPI UTR number');
-   if(mode.value=='cheque'&&!chequeNo.value.trim())return alert('Enter the cheque number');
-   const p={supplier:s.id,amt:a,at:new Date((date.value||new Date().toLocaleDateString('en-CA'))+'T12:00:00').toISOString(),mode:mode.value,
-    utr:mode.value=='upi'?utr.value.trim():'',chequeNo:mode.value=='cheque'?chequeNo.value.trim():'',chequeDate:mode.value=='cheque'?chequeDate.value:'',bankRef:mode.value=='bank'?bankRef.value.trim():'',
-    note:note.value.trim(),by:S.user.id};
-   await save('suppayment',p);await audit('supplier_payment',s.name+' '+inr(a)+' via '+PAY_MODES[mode.value]);x();render()}},'Save payment'),h('button',{onclick:()=>x()},'Cancel')))}
-/* Purchase returns (Part 3 #4): a "Return to supplier" action on a received PO line. Accounting choice
-   (judgment call, documented): rather than a separate negative-adjustment record, we reduce the line's
-   `received` count directly and recompute `payable` from it (payable is already defined as
-   sum(received*cost) -- see receiveLine above), so payable/outstanding stay driven from one single
-   source of truth instead of two parallel numbers that could drift out of sync. Stock is decremented
-   back out and a `purchase_return` stockmove entry is logged, symmetric with how `receiveLine` logs a
-   `purchase` entry on the way in. */
-async function returnToSupplier(po,i){const l=po.lines[i];const max=l.received||0;if(!max)return alert('Nothing received on this line yet.');
- const v=prompt('Quantity to return to supplier (max '+max+')',max);const q=Math.floor(+v);if(!(q>0)||q>max)return;
- const kind=DEPT_KIND[l.dept],it=rec(l.itemId);if(it){it.stock=Math.max(0,(it.stock||0)-q);await save(kind,it,it.id);await logStock(l.dept,it.id,it.name||it.title,'purchase_return',-q,po.no)}
- l.received=max-q;po.status=po.lines.every(x=>(x.received||0)>=x.qty)?'received':(po.lines.some(x=>x.received)?'partial':'ordered');
- po.payable=r2(po.lines.reduce((a,x)=>a+(x.received||0)*x.cost,0));await save('po',po,po.id);await audit('purchase_return',po.no+' '+l.name+' x'+q);render()}
-function supplierLedgerModal(s){const pos=L('po').filter(po=>po.supplier==s.id).sort((a,b)=>b.created>a.created?1:-1);
- const totalPayable=r2(pos.reduce((a,po)=>a+(po.payable||0),0));
- const outstanding=supplierOutstanding(s.id);
- const oldest=oldestUnpaidBillDate(s.id);
- const daysElapsed=oldest?Math.floor((Date.now()-new Date(oldest))/86400000):null;
- const overdue=outstanding>0&&s.creditDays!=null&&daysElapsed!=null&&daysElapsed>s.creditDays;
- const pays=supPaymentsFor(s.id);
- const payRefText=p=>p.mode=='upi'?('UTR '+p.utr):p.mode=='cheque'?('Cheque #'+p.chequeNo+(p.chequeDate?' dt. '+p.chequeDate:'')):p.mode=='bank'?('Ref '+p.bankRef):'';
- const x=modal(h('h3',{},'Statement of account — '+esc(s.name)),
-  h('div',{},'Total payable: '+inr(totalPayable)+' · Outstanding: '+inr(outstanding)),
-  outstanding>0&&oldest?h('div',{class:overdue?'low':''},'Oldest unpaid bill: '+oldest+' ('+daysElapsed+' day(s) ago)'+(s.creditDays!=null?' · Credit period '+s.creditDays+' day(s)'+(overdue?' — OVERDUE':''):'')):null,
-  h('div',{class:'row'},h('h4',{},'Payments ('+pays.length+')'),outstanding>0?h('button',{class:'p sm',onclick:()=>{x();recordSupplierPayment(s)}},'Record payment'):null),
-  ...pays.map(p=>h('div',{class:'row'},new Date(p.at).toLocaleDateString()+' · '+PAY_MODES[p.mode]+(payRefText(p)?' · '+payRefText(p):'')+(p.note?' · '+esc(p.note):''),'-'+inr(p.amt))),
-  !pays.length?h('p',{class:'hint'},'No payments recorded yet.'):null,
-  h('h4',{},'Purchase bills / goods received ('+pos.length+')'),
-  ...pos.map(po=>h('div',{class:'card',style:'margin:6px 0'},h('div',{class:'row'},h('b',{},po.billNo?('Bill '+po.billNo):po.no),h('span',{class:'tag'},po.status),(po.billDate||new Date(po.created).toLocaleDateString()),inr(po.payable||0)),
-   ...po.lines.map(l=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),inr((l.received||0)*l.cost))),
-   ...(po.payments||[]).map(p=>h('div',{class:'row'},'Payment (legacy, per-bill) '+new Date(p.at).toLocaleDateString(),'-'+inr(p.amt))))),
-  !pos.length?h('p',{},'No purchase bills for this supplier yet.'):null,
-  h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
-V.po=()=>{if(!can('m'))return h('p',{},'Manager or owner only.');const pos=L('po').sort((a,b)=>b.created>a.created?1:-1);
- return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Suppliers'),h('button',{class:'p sm',onclick:()=>supForm({})},'Add supplier')),
-   ...L('supplier').map(s=>{const out=supplierOutstanding(s.id);return h('div',{class:'row'},h('button',{class:'sm',onclick:()=>supplierLedgerModal(s)},s.name+' · '+(s.phone||'')),h('span',{},out?h('b',{class:out>0?'low':''},'Outstanding '+inr(out)):null,h('button',{class:'sm',onclick:()=>supForm(s)},'Edit')))})),
-  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Purchase bills'),h('button',{class:'p sm',onclick:poForm},'New bill')),
-   ...pos.map(po=>h('div',{class:'card',style:'margin:8px 0'},h('div',{class:'row'},h('b',{},po.billNo?('Bill '+po.billNo):po.no),h('span',{},po.no),h('span',{class:'tag'},po.status),h('span',{},supNameOf(po.supplier)),h('span',{},po.billDate||''),po.payable?h('span',{},'Payable '+inr(po.payable)+' · Outstanding '+inr(poOutstanding(po))):null),
-    ...po.lines.map((l,i)=>h('div',{class:'row'},l.name+' · '+(l.received||0)+'/'+l.qty+' @ '+inr(l.cost),
-     h('span',{},po.status!='received'?null:null,po.status!='received'?h('input',{type:'number',id:'rq'+po.id+i,placeholder:'Qty',style:'width:70px;min-height:32px;padding:4px'}):null,po.status!='received'?h('button',{class:'sm',onclick:()=>receiveLine(po,i,+($('#rq'+po.id+i)||{}).value||0)},'Receive'):null,
-      (l.received||0)>0?h('button',{class:'sm',onclick:()=>returnToSupplier(po,i)},'Return to supplier'):null))),
-    poOutstanding(po)>0?h('div',{class:'row'},h('span',{class:'hint'},'Legacy per-bill payment:'),h('button',{class:'sm',onclick:()=>recordPoPayment(po)},'Record payment on this bill')):null))))};
 /* stock adjustments: manager/owner records damaged/lost/found stock with a reason, separate from a
    sale or purchase -- both adjusts the item's stock and appends a 'stockmove' ledger entry */
 function stockAdjItems(){return[...L('book').map(b=>({dept:'book',id:b.id,name:b.title})),...L('cafeitem').filter(i=>i.track).map(i=>({dept:'cafe',id:i.id,name:i.name})),...L('stationery').map(i=>({dept:'stat',id:i.id,name:i.name}))]}
@@ -797,32 +747,76 @@ function stockAdjCard(){const items=stockAdjItems();const pick=h('select',{},...
   h('div',{class:'row'},pick,type,qn,note),h('button',{onclick:async()=>{if(!pick.value||!(+qn.value))return alert('Pick an item and a non-zero qty');const[dept,id]=pick.value.split(':');await commitStockAdj(dept,id,type.value,Math.trunc(+qn.value),note.value);qn.value='';note.value='';render()}},'Record adjustment'))}
 /* book rentals: deposit = book price at rental time, book stock decrements like a sale since the
    physical copy leaves the shop. Return computes elapsed days -> refund tier (see rentalRefundPct). */
-function rentTierText(){return 'Returned within 7 days: 80% refund. Within 30 days: 70%. Within 60 days: 60%. After 60 days: deposit forfeited.'}
-function rentalReceipt(r){const s=cfg();const p=(r.pays||[])[0];return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)} (${p?p.m.toUpperCase():''}${p&&p.denoms&&denomSummary(p.denoms)?' — '+denomSummary(p.denoms):''})<hr><b>Refund schedule if returned:</b><br>${rentTierText()}<br><hr>Bring this slip (or your phone number) when you return the book.`}
+function rentTierText(period){period=period||7;return 'Returned within '+period+' days: 80% refund. Within '+(period*4)+' days: 70%. Within '+(period*8)+' days: 60%. After that: deposit forfeited.'}
+function rentalReceipt(r,ord){const s=cfg();const p=(r.pays||[])[0];
+ return `<b>${esc(s.name)}</b><br>${esc(s.addr)} ${esc(s.phone)}<hr>Rental ${r.no} · ${new Date(r.rentedAt).toLocaleString()}<br>${esc((r.cust||{}).name||'')} ${esc((r.cust||{}).phone||'')}<hr>Book: ${esc(r.bookTitle)}<br>Deposit paid: ${inr(r.deposit)} (${p?p.m.toUpperCase():''}${p&&p.denoms&&denomSummary(p.denoms)?' — '+denomSummary(p.denoms):''})
+${ord?`<hr>Also purchased on this bill:<br>${ord.lines.map(l=>`${l.qty}x ${esc(l.name)}: ${inr(l.price*l.qty)}`).join('<br>')}`:''}
+<hr><b>Refund schedule if returned:</b><br>${rentTierText(r.returnPeriod)}<br><hr>Bring this slip (or your phone number) when you return the book.`}
 function rentalRefundReceipt(r){const s=cfg();return `<b>${esc(s.name)}</b><br>Rental return ${r.no}<br>Book: ${esc(r.bookTitle)}<br>Held ${r.heldDays} day(s)<br>Deposit ${inr(r.deposit)} · Refund ${r.refundPct*100}% = ${inr(r.refund)}<br>Refunded: ${(r.refundPays||[]).map(p=>p.m+' '+p.amt+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')).join(', ')}<br>Thank you!`}
-function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0&&b.rentable!==false&&(b.status||'active')!='inactive');const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
+/* Post-rental share popup, same idea as invoiceCreatedPopup (Sell/Orders) but for a rental slip --
+   "after billing rental books it also show popup to share rent slip to customer". */
+function rentalCreatedPopup(r,ord){const link=ord?invLink(ord):null;
+ const x=modal(h('h3',{},'Rental created'),
+  h('div',{},h('b',{},r.no),' — '+esc(r.bookTitle)+', deposit '+inr(r.deposit)+(ord?' + purchase '+inr(ord.t.total):'')),
+  h('div',{class:'actions'},
+   h('button',{class:'p cta',onclick:()=>{let p=((r.cust||{}).phone||'').replace(/\D/g,'');if(!p)return;if(p.length==10)p='91'+p;
+    open('https://wa.me/'+p+'?text='+encodeURIComponent(`Thanks for renting from ${cfg().name}!\nRental ${r.no}\nBook: ${r.bookTitle}\nDeposit: ${inr(r.deposit)}`+(ord?`\nAlso purchased: ${inr(ord.t.total)}`:'')+`\nReturn within ${r.returnPeriod} days for the best refund.`+(link?`\n\nView your bill: ${link}`:'')),'_blank')}},'Send on WhatsApp'),
+   h('button',{onclick:()=>prn(rentalReceipt(r,ord))},'Open slip'),
+   h('button',{onclick:()=>x()},'Done')))}
+/* Rent a book, now with: an editable deposit/MRP (cashier sets it, not locked to the catalog price), a
+   cashier-set return period driving the auto refund tiers above, and the ability to also ring up a
+   straight book purchase on the SAME bill number in one combined payment -- "one who is renting book
+   also can make books purchase as well in same bill no". The combined cash tendered is split into a
+   deposit portion (kind:'rental', carries the denomination breakdown for the live till) and a purchase
+   portion (kind:'order', same bill no, no denoms of its own -- the till only counts it once, via the
+   rental record, while both records' amounts still add up correctly in cash reports). */
+function rentBookModal(){const books=L('book').filter(b=>(b.stock||0)>0&&b.rentable!==false&&(b.status||'active')!='inactive');
+ const pick=h('select',{},...books.map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
+ const depositF=h('input',{type:'number',placeholder:'Deposit / MRP'});
+ const syncDeposit=()=>{const b=books.find(x=>x.id==pick.value);if(b)depositF.value=b.price};
+ pick.onchange=()=>{syncDeposit();refreshTotal()};syncDeposit();
+ const periodF=h('input',{type:'number',placeholder:'Return period (days)',value:7});
  const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
- const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
- useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
+ let extraLines=[];const extraEl=h('div'),extraHdr=h('h4',{},'Also purchasing (0)');
+ const purchPick=h('select',{},h('option',{value:''},'+ Add a book to purchase on this bill'),...L('book').filter(b=>(b.status||'active')!='inactive').map(b=>h('option',{value:b.id},b.title+' ('+inr(b.price)+')')));
+ const refreshExtra=()=>{extraHdr.textContent='Also purchasing ('+extraLines.length+')';extraEl.replaceChildren(...extraLines.map((l,i)=>h('div',{class:'row'},l.name,inr(l.price),h('button',{class:'sm',onclick:()=>{extraLines.splice(i,1);refreshExtra();refreshTotal()}},'x'))))};
+ purchPick.onchange=()=>{if(!purchPick.value)return;const b=rec(purchPick.value);if(!b){purchPick.value='';return}extraLines.push({id:b.id,name:b.title,price:b.price});purchPick.value='';refreshExtra();refreshTotal()};
+ const totEl=h('b',{});
+ const refreshTotal=()=>{totEl.textContent=inr(r2((+depositF.value||0)+extraLines.reduce((a,l)=>a+l.price,0)))};
+ depositF.oninput=refreshTotal;refreshTotal();
  const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
- const x=modal(h('h3',{},'Rent a book'),pick,name,phone,h('div',{class:'row'},'Method',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,h('p',{class:'hint'},rentTierText()),
+ const cashDenom=denomPicker(()=>{});const cdw=h('div',{},h('p',{class:'hint'},'Cash tendered — count notes/coins:'),cashDenom.el);
+ const x=modal(h('h3',{},'Rent a book'),pick,h('div',{class:'row'},depositF,periodF),name,phone,
+  extraHdr,extraEl,purchPick,h('div',{class:'row'},h('b',{},'Total due'),totEl),
+  h('div',{class:'row'},'Method',method),cdw,h('p',{class:'hint'},rentTierText(7)),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=books.find(x=>x.id==pick.value);if(!b)return alert('No book selected');const ph=normPhone(phone.value);
-   const denoms=(method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;
-   const r={id:uid(),no:ticketNo('n_rnt','RNT'),bookId:b.id,bookTitle:b.title,deposit:b.price,cust:{name:name.value.trim(),phone:ph},rentedAt:now(),by:S.user.id,status:'open',pays:[denoms?{m:method.value,amt:dp.sum(),denoms}:{m:method.value,amt:b.price}]};
-   await save('book',{...b,stock:Math.max(0,(b.stock||0)-1)},b.id);await logStock('book',b.id,b.title,'sale',-1,r.no);
-   await save('rental',r,r.id);if(ph)await touchCustomer(ph,name.value.trim());x();prn(rentalReceipt(r));render()}},'Rent & print slip'),h('button',{onclick:()=>x()},'Cancel')))}
-function returnRentalModal(r){const days=Math.floor((Date.now()-new Date(r.rentedAt))/86400000);const pct=rentalRefundPct(days);const refund=r2(r.deposit*pct);
+   if(!name.value.trim()||!ph)return alert('Customer name and phone are required.');
+   const deposit=+depositF.value||0;if(!(deposit>0))return alert('Enter a deposit / MRP amount');
+   const period=Math.max(1,Math.trunc(+periodF.value)||7);
+   const purchTotal=r2(extraLines.reduce((a,l)=>a+l.price,0));const dueTotal=r2(deposit+purchTotal);
+   if(method.value=='cash'&&r2(cashDenom.sum())<dueTotal)return alert('Cash counted ('+inr(cashDenom.sum())+') is less than the total due ('+inr(dueTotal)+').');
+   const denoms=method.value=='cash'?{...cashDenom.vals}:null;
+   const billNo=ticketNo('n_rnt','RNT');
+   const r={id:uid(),no:billNo,bookId:b.id,bookTitle:b.title,deposit,returnPeriod:period,cust:{name:name.value.trim(),phone:ph},rentedAt:now(),by:S.user.id,status:'open',
+    pays:[denoms?{m:method.value,amt:deposit,denoms}:{m:method.value,amt:deposit}]};
+   await save('book',{...b,stock:Math.max(0,(b.stock||0)-1)},b.id);await logStock('book',b.id,b.title,'sale',-1,billNo);
+   await save('rental',r,r.id);await touchCustomer(ph,name.value.trim());
+   let ord=null;
+   if(extraLines.length){ord={id:uid(),no:billNo,lines:extraLines.map(l=>({dept:'book',id:l.id,name:l.name,price:l.price,gst:0,qty:1,disc:0})),status:'paid',type:'sale',created:now(),paidAt:now(),by:S.user.id,cust:{name:name.value.trim(),phone:ph},pays:[{m:method.value,amt:purchTotal}],short:uid().replace(/-/g,'').slice(0,10)};
+    ord.t=tot(ord);await save('order',ord,ord.id);await adjustStock(ord,-1)}
+   x();prn(rentalReceipt(r,ord));render();rentalCreatedPopup(r,ord)}},'Rent & bill'),h('button',{onclick:()=>x()},'Cancel')))}
+function returnRentalModal(r){const days=Math.floor((Date.now()-new Date(r.rentedAt))/86400000);const pct=rentalRefundPct(days,r.returnPeriod);const refund=r2(r.deposit*pct);
  const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
- const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
- useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
- const x=modal(h('h3',{},'Return rental — '+esc(r.bookTitle)),h('p',{},'Held '+days+' day(s). Refund tier: '+(pct*100)+'% of '+inr(r.deposit)+' = '+inr(refund)+'.'),
-  refund>0?h('div',{class:'row'},'Refund via',method):null,refund>0?h('label',{},useDenom,' Cash — count by denomination'):null,cdw,
+ const dp=denomPicker(()=>{});const cdw=refund>0?h('div',{},h('p',{class:'hint'},'Refund tendered — count notes/coins:'),dp.el):null;
+ const x=modal(h('h3',{},'Return rental — '+esc(r.bookTitle)),h('p',{},'Held '+days+' day(s), return period was '+(r.returnPeriod||7)+' day(s). Refund tier: '+(pct*100)+'% of '+inr(r.deposit)+' = '+inr(refund)+'.'),
+  refund>0?h('div',{class:'row'},'Refund via',method):null,cdw,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const b=rec(r.bookId);if(b)await save('book',{...b,stock:(b.stock||0)+1},b.id);if(b)await logStock('book',b.id,b.title,'return',1,r.no);
-   const denoms=(refund>0&&method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;
+   if(refund>0&&method.value=='cash'&&r2(dp.sum())<refund)return alert('Cash counted ('+inr(dp.sum())+') is less than the refund due ('+inr(refund)+').');
+   const denoms=(refund>0&&method.value=='cash')?{...dp.vals}:null;
    const rr={...r,status:'returned',returnedAt:now(),heldDays:days,refundPct:pct,refund,refundPays:refund>0?[denoms?{m:method.value,amt:refund,denoms}:{m:method.value,amt:refund}]:[]};
    await save('rental',rr,r.id);await audit('rental_return',r.no+' '+days+'d '+(pct*100)+'% = '+inr(refund));x();prn(rentalRefundReceipt(rr));render()}},'Confirm return'),h('button',{onclick:()=>x()},'Cancel')))}
 V.rentals=()=>{const open=L('rental').filter(r=>r.status=='open').sort((a,b)=>a.rentedAt<b.rentedAt?-1:1);
- const lookup=h('input',{placeholder:'Search by phone or ticket no',value:S.rentQ||'',oninput:e=>{S.rentQ=e.target.value;render()}});
+ const lookup=h('input',{placeholder:'Search by phone or ticket no',value:S.rentQ||'','data-focus-key':'rentQ',oninput:e=>{S.rentQ=e.target.value;render()}});
  const q=(S.rentQ||'').toLowerCase();const shown=q?open.filter(r=>(r.no||'').toLowerCase().includes(q)||normPhone((r.cust||{}).phone).includes(q.replace(/\D/g,''))):open;
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Book rentals'),h('button',{class:'p sm',onclick:rentBookModal},'Rent a book')),h('p',{class:'hint'},rentTierText())),
   h('div',{class:'card'},h('h3',{},'Open rentals ('+open.length+')'),lookup,
@@ -834,63 +828,48 @@ V.rentals=()=>{const open=L('rental').filter(r=>r.status=='open').sort((a,b)=>a.
    overage is allowed (not hard-blocked) and surfaced clearly, matching how a real space would treat
    a paying regular. */
 function activeMembership(phone){return L('membership').filter(m=>normPhone(m.phone)==phone).sort((a,b)=>b.purchasedAt>a.purchasedAt?1:-1)[0]}
-function openCheckin(phone){return L('checkin').find(c=>normPhone(c.phone)==phone&&c.status=='in')}
+/* Membership payment now always counts by denomination (same "track all notes and coins live" change
+   as Sell) and validates the cash counted actually covers the plan price before accepting it. */
 function buyMembershipModal(){const plan=h('select',{},...MEMBER_PLANS.map(p=>h('option',{value:p.id},p.label+' — '+inr(p.price))));
  const name=h('input',{placeholder:'Customer name'}),phone=h('input',{placeholder:'Customer phone'});
  const method=h('select',{},...['cash','upi','card'].map(m=>h('option',{value:m},m.toUpperCase())));
- const useDenom=h('input',{type:'checkbox'});const cdw=h('div',{style:'display:none'});const dp=denomPicker(()=>{});
- useDenom.onchange=()=>{cdw.style.display=useDenom.checked?'block':'none';cdw.replaceChildren(dp.el)};
- const x=modal(h('h3',{},'Sell / renew membership'),plan,name,phone,h('div',{class:'row'},'Pay via',method),h('label',{},useDenom,' Cash — count by denomination'),cdw,
-  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const p=MEMBER_PLANS.find(x=>x.id==plan.value);const ph=normPhone(phone.value);if(!ph)return alert('Phone required');
-   const denoms=(method.value=='cash'&&useDenom.checked)?{...dp.vals}:null;const paid=denoms?dp.sum():p.price;
+ const dp=denomPicker(()=>{});const cdw=h('div',{},h('p',{class:'hint'},'Cash tendered — count notes/coins:'),dp.el);
+ const x=modal(h('h3',{},'Sell / renew membership'),plan,name,phone,h('div',{class:'row'},'Pay via',method),cdw,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const p=MEMBER_PLANS.find(x=>x.id==plan.value);const ph=normPhone(phone.value);if(!ph)return alert('Phone required');if(!name.value.trim())return alert('Name required');
+   if(method.value=='cash'&&r2(dp.sum())<p.price)return alert('Cash counted ('+inr(dp.sum())+') is less than the plan price ('+inr(p.price)+').');
+   const denoms=method.value=='cash'?{...dp.vals}:null;const paid=denoms?dp.sum():p.price;
    const m={id:uid(),no:ticketNo('n_mem','MEM'),phone:ph,name:name.value.trim(),plan:p.id,hoursTotal:p.hours,hoursUsed:0,purchasedAt:now(),expiresAt:new Date(Date.now()+30*86400000).toISOString(),status:'active',pays:[denoms?{m:method.value,amt:paid,denoms}:{m:method.value,amt:paid}]};
    await save('membership',m,m.id);await touchCustomer(ph,name.value.trim());x();prn(`<b>${esc(cfg().name)}</b><br>Membership ${m.no}<br>${esc(m.name)} ${ph}<br>Plan: ${p.label}<br>Paid: ${inr(paid)}${denoms&&denomSummary(denoms)?' ('+denomSummary(denoms)+')':''}<br>Valid until ${new Date(m.expiresAt).toLocaleDateString()}<br>Thank you!`);render()}},'Sell / renew'),h('button',{onclick:()=>x()},'Cancel')))}
-function checkinModal(prefillPhone){const phone=h('input',{placeholder:'Member phone',value:prefillPhone||''});const out=h('div');
- phone.oninput=()=>{const ph=normPhone(phone.value);const m=ph?activeMembership(ph):null;const expired=m&&m.expiresAt<=now();
-  out.replaceChildren(m?h('p',{class:expired?'low':''},esc(m.name)+' · '+r2((m.hoursTotal||0)-(m.hoursUsed||0))+' hrs remaining · '+(expired?'Expired '+new Date(m.expiresAt).toLocaleDateString()+' — renew before checking in':'expires '+new Date(m.expiresAt).toLocaleDateString())):h('p',{class:'hint'},ph?'No membership found for this phone.':''))};
- if(prefillPhone)phone.oninput();
- const x=modal(h('h3',{},'Check in'),phone,out,h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{const ph=normPhone(phone.value);if(!ph)return alert('Enter phone');const m=activeMembership(ph);if(!m)return alert('No membership found — sell one first');
-  if(m.expiresAt<=now())return alert('This membership expired on '+new Date(m.expiresAt).toLocaleDateString()+' — sell/renew a membership first.');
-  if(openCheckin(ph))return alert('Already checked in');
-  await save('checkin',{id:uid(),phone:ph,name:m.name,membershipId:m.id,inAt:now(),status:'in'});await touchCustomer(ph,m.name);x();render()}},'Check in'),h('button',{onclick:()=>x()},'Cancel')))}
-async function checkoutMember(c){const hrs=r2((Date.now()-new Date(c.inAt))/3600000);const m=L('membership').find(x=>x.id==c.membershipId)||activeMembership(c.phone);
- const remaining=m?r2((m.hoursTotal||0)-(m.hoursUsed||0)):0;const over=hrs>remaining;
- if(!confirm('Check out '+c.name+'? Session: '+hrs+' hrs.'+(over?' This exceeds their remaining '+remaining+' hrs (overage '+r2(hrs-remaining)+' hrs) — allowed.':'')))return;
- if(m){m.hoursUsed=r2((m.hoursUsed||0)+hrs);await save('membership',m,m.id)}
- await save('checkin',{...c,status:'out',outAt:now(),hours:hrs},c.id);render()}
-V.membership=()=>{const inNow=L('checkin').filter(c=>c.status=='in');
- /* All active members (one row per phone, latest membership, not expired) -- previously this tab only
-    showed who's physically checked in right now, with no way to see the full member base at a glance. */
- const phones=[...new Set(L('membership').map(m=>normPhone(m.phone)))];
+/* Check-in/check-out is tracked externally via Petpooja Attendo now, not built here -- the app only
+   shows the membership itself (plan, hours balance, validity, contact) plus the purchase/renew flow. */
+V.membership=()=>{const phones=[...new Set(L('membership').map(m=>normPhone(m.phone)))];
  const activeMembers=phones.map(p=>activeMembership(p)).filter(m=>m&&m.status=='active'&&m.expiresAt>now()).sort((a,b)=>a.name.localeCompare(b.name));
  return h('div',{},h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Co-reading membership'),h('button',{class:'p sm',onclick:buyMembershipModal},'Sell / renew membership')),
-   ...MEMBER_PLANS.map(p=>h('div',{class:'row'},p.label,inr(p.price)))),
-  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Checked in ('+inNow.length+')'),h('button',{class:'p sm',onclick:checkinModal},'Check in a member')),
-   ...inNow.map(c=>{const elapsed=r2((Date.now()-new Date(c.inAt))/3600000);return h('div',{class:'row'},esc(c.name)+' · '+c.phone,h('span',{},elapsed+' hrs so far',h('button',{class:'sm',onclick:()=>checkoutMember(c)},'Check out')))}),
-   !inNow.length?h('p',{},'No one checked in right now.'):null),
+   ...MEMBER_PLANS.map(p=>h('div',{class:'row'},p.label,inr(p.price))),
+   h('p',{class:'hint'},'Check-in / check-out is tracked via Petpooja Attendo, not here.')),
   h('div',{class:'card'},h('h3',{},'Active members ('+activeMembers.length+')'),
-   ...activeMembers.map(m=>{const plan=(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label||m.plan,remaining=r2((m.hoursTotal||0)-(m.hoursUsed||0)),checkedIn=openCheckin(m.phone);
-    return h('div',{class:'row'},h('div',{},h('b',{},esc(m.name)),h('br'),h('small',{},m.phone+' · '+plan+' · '+remaining+'/'+m.hoursTotal+' hrs left · expires '+new Date(m.expiresAt).toLocaleDateString())),
-     checkedIn?h('span',{class:'tag'},'Checked in'):h('button',{class:'sm',onclick:()=>checkinModal(m.phone)},'Check in'))}),
+   ...activeMembers.map(m=>{const plan=(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label||m.plan,remaining=r2((m.hoursTotal||0)-(m.hoursUsed||0)),c=rec(m.phone);
+    return h('div',{class:'card'},
+     h('div',{class:'hint'},'Member'),h('div',{style:'font-weight:700;font-size:15px'},esc(m.name)),h('div',{class:'hint'},m.phone+(c&&c.email?' · '+c.email:'')),
+     h('div',{class:'row'},h('span',{class:'hint'},'Plan'),h('b',{},plan),h('span',{class:'hint'},'Purchased'),h('b',{},new Date(m.purchasedAt).toLocaleDateString())),
+     h('div',{class:'row'},h('span',{class:'hint'},'Hours'),h('b',{},remaining+' / '+m.hoursTotal+' left'),h('span',{class:'hint'},'Expires'),h('b',{},new Date(m.expiresAt).toLocaleDateString())),
+     h('div',{class:'row'},h('button',{class:'sm',onclick:()=>waMsg(m.phone,'Hi '+m.name+'!')},'WhatsApp'),h('button',{class:'sm',onclick:()=>custModal({cust:{name:m.name,phone:m.phone}})},'Details')))}),
    !activeMembers.length?h('p',{},'No active members yet.'):null))};
 /* CRM: customer directory built automatically from touchCustomer() at checkout/rental/checkin */
+/* Card-per-customer layout (per reference: Client name/phone, Visits/Bills, Billed total/Last visit,
+   New bill/WhatsApp) instead of a table -- reads cleanly at a glance on mobile without a horizontal
+   table or a stacked label:value wall. Tapping the card (not the action buttons) opens full detail. */
 V.crm=()=>{const q=(S.crmQ||'').toLowerCase();let custs=L('customer').sort((a,b)=>(b.lastVisit||'')>(a.lastVisit||'')?1:-1);
  if(q)custs=custs.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q));
- /* Compact 2-line row (see .rtable.t2 CSS) instead of one full-width card per field -- the old plain
-    .rtable stacked all 7 columns as separate label:value lines per customer, ~300px tall each on
-    mobile for 4 rows of text; this is the "customer detail UI is a mess" fix. Desktop still sees the
-    full table (thead + all columns) since the collapse only applies under 700px. The row itself opens
-    the detail modal, so mobile doesn't need a separate button column. */
- return h('div',{class:'card'},h('h3',{},'Customers ('+custs.length+')'),h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search name or phone',value:S.crmQ||'',oninput:e=>{S.crmQ=e.target.value;render()}})),
-  h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Name'),h('th',{},'Phone'),h('th',{},'Visits'),h('th',{},'Last visit'),h('th',{},'Points'),h('th',{},'Credit'),h('th',{},'Membership'),h('th',{})),
-   ...custs.map(c=>{const m=activeMembership(c.phone),memLabel=m&&m.status=='active'&&m.expiresAt>now()?(MEMBER_PLANS.find(p=>p.id==m.plan)||{}).label:null,open=()=>custModal({cust:{name:c.name,phone:c.phone}});
-    return h('tr',{style:'cursor:pointer',onclick:open},
-     h('td',{class:'p1','data-label':'Name'},esc(c.name||'(no name)'),c.b2b?h('span',{class:'tag',style:'margin-left:5px'},'B2B'):null),
-     h('td',{class:'p2','data-label':'Phone'},c.phone+' · '+(c.visits||0)+' visit'+(c.visits==1?'':'s')+' · pts '+(c.points||0)+(c.credit?' · credit '+inr(c.credit):'')+(memLabel?' · '+memLabel:'')),
-     h('td',{'data-label':'Phone'},c.phone),h('td',{'data-label':'Visits'},c.visits||0),h('td',{'data-label':'Last visit'},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—'),
-     h('td',{'data-label':'Points'},c.points||0),h('td',{'data-label':'Credit'},inr(c.credit||0)),h('td',{'data-label':'Membership'},memLabel||'—'),
-     h('td',{},h('button',{class:'sm',onclick:e=>{e.stopPropagation();open()}},'View')))}),
-  !custs.length?h('p',{},'No customers yet — they are added automatically at checkout, rental or membership check-in.'):null))};
+ return[h('div',{class:'card'},h('h3',{},'Customers ('+custs.length+')'),h('div',{class:'search-row'},icon('search',18),h('input',{placeholder:'Search name or phone',value:S.crmQ||'','data-focus-key':'crmQ',oninput:e=>{S.crmQ=e.target.value;render()}}))),
+ ...custs.map(c=>{const bills=L('order').filter(o=>o.status=='paid'&&o.type!='return'&&normPhone((o.cust||{}).phone)==c.phone).length,billed=custLifetimeSpend(c.phone);
+  const open=()=>custModal({cust:{name:c.name,phone:c.phone}});
+  return h('div',{class:'card'},
+   h('div',{class:'hint'},'Client'),h('div',{style:'font-weight:700;font-size:15px'},esc(c.name||'(no name)'),c.b2b?h('span',{class:'tag',style:'margin-left:5px'},'B2B'):null),h('div',{class:'hint'},c.phone),
+   h('div',{class:'row'},h('span',{class:'hint'},'Visits'),h('b',{},c.visits||0),h('span',{class:'hint'},'Bills'),h('b',{},bills)),
+   h('div',{class:'row'},h('span',{class:'hint'},'Billed'),h('b',{},inr(billed)),h('span',{class:'hint'},'Last visit'),h('b',{},c.lastVisit?new Date(c.lastVisit).toLocaleDateString():'—')),
+   h('div',{class:'row'},h('button',{class:'p sm',onclick:()=>{S.cur=newOrder();S.cur.cust={name:c.name,phone:c.phone};S.tab='pos';render()}},'New bill'),h('button',{class:'sm',onclick:()=>waMsg(c.phone,'Hi '+(c.name||'')+'!')},'WhatsApp'),h('button',{class:'sm',onclick:open},'Details')))}),
+ !custs.length?h('p',{},'No customers yet — they are added automatically at checkout, rental or membership check-in.'):null]};
 /* CSV import */
 function parseCSV(text){const rows=[];let row=[],cur='',q=false;text=text.replace(/\r\n/g,'\n');
  for(let i=0;i<text.length;i++){const c=text[i];
@@ -941,20 +920,19 @@ function importModal(dept){const inp=h('input',{type:'file',accept:'.csv'});cons
 /* item forms */
 function bookForm(b){const f={title:h('input',{value:b.title||'',placeholder:'Title'}),author:h('input',{value:b.author||'',placeholder:'Author'}),publisher:h('input',{value:b.publisher||'',placeholder:'Publisher'}),isbn:h('input',{value:b.isbn||'',placeholder:'ISBN / barcode'}),
   cat:h('select',{},...L('cat').filter(c=>c.dept=='book').map(c=>h('option',{value:c.id,selected:c.id==b.cat},c.name))),
-  supplier:h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==b.supplier},s.name))),
   cost:h('input',{type:'number',value:b.cost??'',placeholder:'Cost price'}),mrp:h('input',{type:'number',value:b.mrp??'',placeholder:'MRP (printed price, optional)'}),price:h('input',{type:'number',value:b.price??'',placeholder:'Sell price (incl. GST)'}),stock:h('input',{type:'number',value:b.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:b.reorder??2,placeholder:'Reorder threshold'}),hsn:h('input',{value:b.hsn||'',placeholder:'HSN code (optional)'}),unit:h('input',{value:b.unit||'pcs',placeholder:'Unit (e.g. pcs)'}),
   edition:h('input',{value:b.edition||'',placeholder:'Edition (optional)'}),language:h('input',{value:b.language||'',placeholder:'Language (optional)'}),subcat:h('input',{value:b.subcat||'',placeholder:'Subcategory (free text, optional)'}),rack:h('input',{value:b.rack||'',placeholder:'Rack / shelf location (optional)'}),coverUrl:h('input',{value:b.coverUrl||'',placeholder:'Cover image URL (optional)'}),
   rentable:h('input',{type:'checkbox',checked:b.rentable!==false}),
   status:h('select',{},...['active','inactive'].map(s=>h('option',{value:s,selected:(b.status||'active')==s},s))),
   shopifyInventoryItemId:h('input',{value:b.shopifyInventoryItemId||'',placeholder:'Shopify Inventory Item ID (optional)'})};
  const genBtn=h('button',{class:'sm',onclick:()=>{f.isbn.value=genCode('BK')}},'Generate barcode');
- const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.supplier,f.cost,f.mrp,f.price,f.unit,f.stock,f.reorder,f.hsn,
+ const x=modal(h('h3',{},b.id?'Edit book':'New book'),f.title,f.author,f.publisher,h('div',{class:'row'},f.isbn,genBtn),f.cat,f.cost,f.mrp,f.price,f.unit,f.stock,f.reorder,f.hsn,
   h('div',{class:'row'},f.edition,f.language),f.subcat,f.rack,f.coverUrl,f.shopifyInventoryItemId,
   h('div',{class:'row'},h('label',{},f.rentable,' Rentable (appears in Rent-a-book)'),h('label',{},'Status',f.status)),
   h('p',{class:'hint'},'Books are GST-exempt (0%) by law. Inactive books stay in Inventory for records but are hidden from Sell and Rent-a-book.'),
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.title.value||!f.cat.value||!(+f.price.value>0))return alert('Title, category and sell price are needed.');
    if(b.id&&(b.stock!=+f.stock.value||b.price!=+f.price.value))await audit('edit_book',b.title+' stock '+(b.stock??0)+'->'+f.stock.value+' price '+(b.price??0)+'->'+f.price.value);
-   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,supplier:f.supplier.value||null,cost:+f.cost.value||0,mrp:f.mrp.value===''?null:+f.mrp.value,price:+f.price.value,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim(),
+   await save('book',{...b,title:f.title.value.trim(),author:f.author.value.trim(),publisher:f.publisher.value.trim(),isbn:f.isbn.value.trim(),cat:f.cat.value,cost:+f.cost.value||0,mrp:f.mrp.value===''?null:+f.mrp.value,price:+f.price.value,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,gst:0,hsn:f.hsn.value.trim(),
     edition:f.edition.value.trim(),language:f.language.value.trim(),subcat:f.subcat.value.trim(),rack:f.rack.value.trim(),coverUrl:f.coverUrl.value.trim(),rentable:f.rentable.checked,status:f.status.value,shopifyInventoryItemId:f.shopifyInventoryItemId.value.trim()},b.id);x();render()}},'Save'),
    h('button',{onclick:()=>{if(!f.isbn.value)return alert('Enter or generate a barcode first');printBarcode(f.isbn.value,f.title.value)}},'Print barcode'),
    b.id?h('button',{onclick:async()=>{await save('book',b,b.id,true);x();render()}},'Delete'):null))}
@@ -962,17 +940,16 @@ function stockForm(dept,it){const kind=DEPT_KIND[dept];
  const f={name:h('input',{value:it.name||'',placeholder:'Name'}),cat:h('select',{},...L('cat').filter(c=>c.dept==dept).map(c=>h('option',{value:c.id,selected:c.id==it.cat},c.name))),
   price:h('input',{type:'number',value:it.price??'',placeholder:'Price (incl. GST)'}),cost:h('input',{type:'number',value:it.cost??'',placeholder:'Cost price (optional, for margin reports)'}),gst:h('input',{type:'number',value:it.gst??DM[dept].gst,placeholder:'GST % (already included in price)'}),
   track:dept=='cafe'?h('input',{type:'checkbox',checked:it.track}):null,sku:dept=='stat'?h('input',{value:it.sku||'',placeholder:'SKU / barcode'}):null,
-  supplier:dept=='stat'?h('select',{},h('option',{value:''},'No supplier'),...L('supplier').map(s=>h('option',{value:s.id,selected:s.id==it.supplier},s.name))):null,
   mrp:dept=='stat'?h('input',{type:'number',value:it.mrp??'',placeholder:'MRP (printed price, optional)'}):null,unit:h('input',{value:it.unit||'pcs',placeholder:'Unit (e.g. pcs)'}),
   stock:h('input',{type:'number',value:it.stock??0,placeholder:'Stock qty'}),reorder:h('input',{type:'number',value:it.reorder??5,placeholder:'Reorder threshold'}),hsn:h('input',{value:it.hsn||'',placeholder:'HSN code (optional)'}),
   shopifyInventoryItemId:h('input',{value:it.shopifyInventoryItemId||'',placeholder:'Shopify Inventory Item ID (optional)'})};
  const genBtn=dept=='stat'?h('button',{class:'sm',onclick:()=>{f.sku.value=genCode('ST')}},'Generate barcode'):null;
  const x=modal(h('h3',{},it.id?'Edit '+DM[dept].label+' item':'New '+DM[dept].label+' item'),
-  f.name,f.cat,f.price,f.cost,f.gst,dept=='stat'?f.mrp:null,f.unit,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,dept=='stat'?f.supplier:null,f.stock,f.reorder,f.hsn,f.shopifyInventoryItemId,
+  f.name,f.cat,f.price,f.cost,f.gst,dept=='stat'?f.mrp:null,f.unit,dept=='cafe'?h('label',{},f.track,' Track stock for this item'):null,dept=='stat'?h('div',{class:'row'},f.sku,genBtn):null,f.stock,f.reorder,f.hsn,f.shopifyInventoryItemId,
   h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!f.name.value||!f.cat.value||!(+f.price.value>0))return alert('Name, category and price are needed.');
    if(it.id&&(it.stock!=+f.stock.value||it.price!=+f.price.value))await audit('edit_'+kind,f.name.value+' stock '+(it.stock??0)+'->'+f.stock.value+' price '+(it.price??0)+'->'+f.price.value);
    const data={...it,name:f.name.value.trim(),cat:f.cat.value,price:+f.price.value,cost:+f.cost.value||0,gst:f.gst.value===''?DM[dept].gst:+f.gst.value,track:dept=='cafe'?f.track.checked:true,unit:f.unit.value.trim()||'pcs',stock:+f.stock.value||0,reorder:f.reorder.value===''?null:+f.reorder.value,hsn:f.hsn.value.trim(),shopifyInventoryItemId:f.shopifyInventoryItemId.value.trim()};
-   if(dept=='stat'){data.sku=f.sku.value.trim();data.supplier=f.supplier.value||null;data.mrp=f.mrp.value===''?null:+f.mrp.value}
+   if(dept=='stat'){data.sku=f.sku.value.trim();data.mrp=f.mrp.value===''?null:+f.mrp.value}
    await save(kind,data,it.id);x();render()}},'Save'),
    dept=='stat'?h('button',{onclick:()=>{if(!f.sku.value)return alert('Enter or generate a barcode first');printBarcode(f.sku.value,f.name.value)}},'Print barcode'):null,
    it.id?h('button',{onclick:async()=>{await save(kind,it,it.id,true);x();render()}},'Delete'):null))}
@@ -985,32 +962,49 @@ V.inv=()=>{if(!can('o'))return h('p',{},'Owner only.');const catsFor=d=>L('cat')
   h('div',{class:'card'},h('h3',{},DM[dept].label+' ('+items.length+')'),h('table',{class:'rtable'},h('tr',{},h('th',{},'Name'),h('th',{},'Price'),h('th',{},'GST%'),h('th',{},'Stock'),h('th',{})),
    ...items.map(it=>{const label=dept=='book'?it.title:it.name;const tracked=dept!='cafe'||it.track;const low=tracked&&it.reorder!=null&&(it.stock||0)<=it.reorder;
     return h('tr',{},h('td',{'data-label':'Name'},it.coverUrl?h('img',{src:it.coverUrl,style:'width:22px;height:28px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:5px'}):null,label,dept=='book'&&(it.status||'active')=='inactive'?h('span',{class:'tag'},'inactive'):null),h('td',{'data-label':'Price'},inr(it.price)),h('td',{'data-label':'GST%'},dept=='book'?'0 (exempt)':(it.gst??DM[dept].gst)),h('td',{'data-label':'Stock',class:low?'low':''},tracked?(it.stock||0):'—'),h('td',{},h('button',{class:'sm',onclick:()=>dept=='book'?bookForm(it):stockForm(dept,it)},'Edit'),tracked?h('button',{class:'sm',onclick:()=>stockLedgerModal(dept,it.id,label)},'Ledger'):null))}))))};
- const tables=L('table');
- return h('div',{},sect('book'),sect('cafe'),sect('stat'),
-  h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Cafe tables (QR self-order)'),h('button',{class:'p sm',onclick:()=>{const n=prompt('Table name/number, e.g. T1');n&&save('table',{name:n}).then(render)}},'Add table')),
-   ...tables.map(t=>h('div',{class:'row'},t.name,h('span',{},h('button',{class:'sm',onclick:()=>printTableQR(t)},'Print QR'),h('button',{class:'sm',onclick:()=>confirm('Delete table?')&&save('table',t,t.id,true).then(render)},'Delete'))))))};
-V.staff=()=>{if(!can('o'))return h('p',{},'Owner only.');
- return h('div',{class:'card'},h('h3',{},'Staff'),h('p',{class:'hint'},'To add a brand-new staff login, create the user in Supabase Authentication first (the app cannot create auth users without a service role key) — see SETUP-GUIDE.md section 6 — then set their role here.'),
+ return h('div',{},sect('book'),sect('cafe'),sect('stat'))};
+/* Staff PIN roster: a lightweight staff directory (name/PIN/role) for attribution on a shared device --
+   distinct from Supabase Authentication logins below, which remain the actual sign-in credential this
+   app checks. A PIN here identifies who's at the counter for a shift, it does not itself grant access;
+   who can sign in to the app at all is still managed via Supabase Auth + the role dropdown further
+   down. Owner-only to add/edit/delete (records RLS already defaults any kind not explicitly listed to
+   owner-only, so no schema change was needed for this). */
+function staffPinForm(sp){const name=h('input',{value:sp.name||'',placeholder:'Name'}),pin=h('input',{value:sp.pin||'',placeholder:'PIN (4-6 digits)',maxlength:6}),
+  role=h('select',{},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:(sp.role||'cashier')==r},r))),email=h('input',{value:sp.email||'',placeholder:'Email (optional, for reference)'});
+ const x=modal(h('h3',{},sp.id?'Edit staff':'Add staff'),name,pin,role,email,
+  h('div',{class:'actions'},h('button',{class:'p',onclick:async()=>{if(!name.value.trim())return alert('Name required');if(!/^\d{4,6}$/.test(pin.value.trim()))return alert('PIN must be 4-6 digits');
+   await save('staffpin',{...sp,name:name.value.trim(),pin:pin.value.trim(),role:role.value,email:email.value.trim()},sp.id);x();render()}},'Save'),
+   sp.id?h('button',{onclick:async()=>{await save('staffpin',sp,sp.id,true);x();render()}},'Delete'):null,h('button',{onclick:()=>x()},'Cancel')))}
+V.staff=()=>{if(!can('o'))return h('p',{},'Owner only.');const pins=L('staffpin').sort((a,b)=>a.name.localeCompare(b.name));
+ return h('div',{},
+ h('div',{class:'card'},h('div',{class:'row'},h('h3',{},'Staff'),h('button',{class:'p sm',onclick:()=>staffPinForm({})},'Add staff')),
+  h('table',{class:'rtable t2'},h('tr',{},h('th',{},'Name'),h('th',{},'Role'),h('th',{},'Email'),h('th',{})),
+   ...pins.map(sp=>h('tr',{},h('td',{class:'p1','data-label':'Name'},esc(sp.name)),h('td',{class:'p2','data-label':'Role'},sp.role+(sp.email?' · '+sp.email:'')),
+    h('td',{'data-label':'Role'},sp.role),h('td',{'data-label':'Email'},sp.email||'—'),h('td',{},h('button',{class:'sm',onclick:()=>staffPinForm(sp)},'Edit')))),
+   !pins.length?h('p',{},'No staff added yet.'):null),
+ h('div',{class:'card'},h('h3',{},'Sign-in logins (Supabase Authentication)'),h('p',{class:'hint'},'To add a brand-new staff login, create the user in Supabase Authentication first (the app cannot create auth users without a service role key) — see SETUP-GUIDE.md section 6 — then set their role here.'),
   h('table',{class:'rtable'},h('tr',{},h('th',{},'Email'),h('th',{},'Role')),
-   ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))};
+   ...PROFILES.map(p=>h('tr',{},h('td',{'data-label':'Email'},p.email||p.id),h('td',{'data-label':'Role'},h('select',{onchange:async e=>{const old=p.role;const{error}=await sb.from('profiles').update({role:e.target.value}).eq('id',p.id);if(error)alert(error.message);else{p.role=e.target.value;await audit('role_change',(p.email||p.id)+' '+old+'->'+e.target.value)}}},...['owner','manager','cashier'].map(r=>h('option',{value:r,selected:r==p.role},r))))))))),
+ h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
+  h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
+   ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
+  !L('audit').length?h('p',{},'No audit entries yet.'):null))};
 V.set=()=>{if(!can('o'))return h('p',{},'Owner only.');const s=cfg(),F={},f=(k,l,t)=>h('label',{style:'display:grid;gap:4px'},l,h('input',{type:t||'text',value:s[k],style:'width:100%',oninput:e=>F[k]=t=='number'?+e.target.value:e.target.value}));
  return h('div',{},h('div',{class:'card',style:'display:grid;gap:8px'},h('h3',{},'Business details'),f('name','Name'),f('addr','Address'),f('phone','Phone'),f('taxid','Tax ID (optional, e.g. GSTIN)'),
   f('homeState','Home state (for CGST/SGST vs IGST — must match a GSTIN-derived state name, e.g. "Maharashtra")'),
   f('tax','Default GST % suggestion for new items (each item still has its own rate)','number'),f('ptsPer','₹ spent per loyalty point earned','number'),f('prefix','Invoice prefix'),f('cur','Currency symbol'),
   h('h4',{},'GSTIN verification (optional)'),h('p',{class:'hint'},'GSTIN state-derivation and checksum validation works with no setup. Business name/address auto-fetch needs a paid third-party GSTIN-verification API (Surepass/Appyflow/ClearTax etc) — this app does not include one. Add your own key+endpoint here to enable it; leave blank to keep using format-derived data only.'),
   f('gstinApiUrl','Verification API endpoint (GSTIN appended to the end)'),f('gstinApiKey','Verification API key'),
-  h('h4',{},'Invoice template'),h('p',{class:'hint'},'Branding for the printable invoice (Invoices tab) — logo, accent colour and a footer line (terms, return policy, thank-you note).'),
-  f('invLogoUrl','Logo image URL (optional)'),f('invAccent','Accent colour (hex, e.g. #141414)'),f('invFooter','Footer / terms text'),
+  h('h4',{},'Invoice template'),h('p',{class:'hint'},'Branding for the printable invoice (Invoices tab) — logo, accent colour, bank details and a footer line (terms, return policy, thank-you note).'),
+  f('invLogoUrl','Logo image URL (optional)'),f('invAccent','Accent colour (hex, e.g. #141414)'),
+  h('h4',{},'Bank account (for payment, shown on invoice)'),f('bankName','Account holder / bank full name'),f('bankAccNo','Account number'),f('bankIfsc','IFSC code'),f('bankName2','Bank name & branch'),
+  f('invFooter','Footer / terms text'),
   h('h4',{},'Shopify inventory sync (optional)'),h('p',{class:'hint'},"Integration point only — inactive until filled in. A sale here will also deduct stock on Shopify for any item that has a Shopify Inventory Item ID set (in its Edit form). Shopify's Admin API blocks direct browser requests (no CORS); a real deployment needs a small server-side proxy — set \"Proxy base URL\" to that proxy's address once you have one, otherwise leave blank."),
   f('shopifyDomain','Store domain (e.g. yourstore.myshopify.com)'),f('shopifyToken','Admin API access token'),f('shopifyLocationId','Location ID'),f('shopifyProxyUrl','Proxy base URL (optional, for CORS)'),
   h('button',{class:'p',onclick:async()=>{await save('settings',{...s,...F},'settings');alert('Saved')}},'Save')),
- h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids, purchase bills.'),h('p',{},'Manager: discounts, voids, returns, purchase bills.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles in the Staff screen (owner only). New logins are still created in Supabase Authentication.')),
- h('div',{class:'card'},h('h3',{},'Audit log'),h('p',{class:'hint'},'Who did what sensitive action (voids, discounts, price/stock edits, role changes, returns, supplier payments) and when.'),
-  h('table',{class:'rtable'},h('tr',{},h('th',{},'When'),h('th',{},'Who'),h('th',{},'Action'),h('th',{},'Detail')),
-   ...L('audit').sort((a,b)=>b.at>a.at?1:-1).slice(0,100).map(a=>h('tr',{},h('td',{'data-label':'When'},new Date(a.at).toLocaleString()),h('td',{'data-label':'Who'},staffLabel(a.by)),h('td',{'data-label':'Action'},a.action),h('td',{'data-label':'Detail'},esc(a.detail||''))))),
-  !L('audit').length?h('p',{},'No audit entries yet.'):null))};
-function tabs(){const T=[['dash','Home'],['pos','Sell'],['orders','Orders'],['invoices','Invoices'],['torders','Tables'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns'],['po','Purchase']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
-const TAB_ICON={dash:'dash',pos:'cart',orders:'orders',invoices:'print',torders:'table',rentals:'rental',membership:'clock',crm:'people',returns:'returns',po:'purchase',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
+ h('div',{class:'card'},h('h3',{},'Roles'),h('p',{},'Owner: inventory, settings, staff roles, reports, voids.'),h('p',{},'Manager: discounts, voids, returns.'),h('p',{},'Cashier: sell, hold, shift counts, table orders.'),h('p',{},'Change roles and manage the staff directory (with the audit log) in the Staff screen, owner only.')))};
+function tabs(){const T=[['dash','Home'],['pos','Sell'],['orders','Orders'],['invoices','Invoices'],['rentals','Rentals'],['membership','Membership'],['crm','Customers']];if(can('m'))T.push(['returns','Returns']);T.push(['rep','Reports'],['shift','Shift']);if(can('o'))T.push(['inv','Inventory'],['staff','Staff'],['set','Settings']);return T}
+const TAB_ICON={dash:'dash',pos:'cart',orders:'orders',invoices:'print',rentals:'rental',membership:'clock',crm:'people',returns:'returns',rep:'reports',shift:'shift',inv:'inv',staff:'staff',set:'settings'};
 /* Unified Dashboard (Part 3 #1): the home screen, first tab. Deliberately reuses rangeOrders/
    expectedCash/lastShift/etc rather than recomputing sales totals a second way. */
 V.dash=()=>{const today=new Date().toLocaleDateString('en-CA'),monthStart=today.slice(0,8)+'01';
@@ -1040,11 +1034,20 @@ V.dash=()=>{const today=new Date().toLocaleDateString('en-CA'),monthStart=today.
   overdueRentals.length?h('div',{class:'card'},h('h3',{},'Needs attention: overdue rentals'),...overdueRentals.map(r=>h('div',{class:'row'},esc(r.bookTitle)+' · '+esc((r.cust||{}).name||''),h('button',{class:'sm',onclick:()=>{S.tab='rentals';render()}},'View')))):null)};
 function moreMenu(rest){const x=modal(h('h3',{},'More'),...rest.map(([k,n])=>h('button',{onclick:()=>{S.tab=k;x();render()}},icon(TAB_ICON[k]||'more',18),' '+n)),h('div',{class:'actions'},h('button',{onclick:()=>x()},'Close')))}
 function signOut(){sb.auth.signOut();localStorage.removeItem('u');location.reload()}
+/* render() rebuilds the whole DOM tree on every state change, including the search input itself --
+   with a naive full re-render, a search box that calls render() on every keystroke loses focus after
+   each character (the old input node is gone, a fresh one takes its place unfocused), which is exactly
+   what showed up as "only accepts one letter at a time". Fix: every live-search input carries a stable
+   data-focus-key matching the S.* field it edits; render() snapshots the focused element's key + cursor
+   position beforehand and restores focus (and cursor) to the newly-built matching input afterward. */
 function render(){const T=tabs();
+ const af=document.activeElement,focusKey=af&&af.dataset&&af.dataset.focusKey;
+ const selStart=focusKey!=null?af.selectionStart:null,selEnd=focusKey!=null?af.selectionEnd:null;
  const header=h('header',{class:'top'},h('span',{class:'ttl'},cfg().name||'POS'),h('span',{class:'stat',id:'net'}),h('button',{onclick:signOut},'Sign out'));
  const rail=h('nav',{class:'rail'},...T.map(([k,n])=>h('button',{class:S.tab==k?'on':'',title:n,onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',22))));
  const bottom=h('nav',{class:'bottom'},...T.slice(0,4).map(([k,n])=>h('button',{class:S.tab==k?'on':'',onclick:()=>{S.tab=k;render()}},icon(TAB_ICON[k]||'more',20),h('span',{},n))),h('button',{class:T.slice(4).some(([k])=>k==S.tab)?'on':'',onclick:()=>moreMenu(T.slice(4))},icon('more',20),h('span',{},'More')));
- $('#app').replaceChildren(header,rail,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote()}
+ $('#app').replaceChildren(header,rail,h('div',{class:'wrap'},V[S.tab]()),bottom);setNote();
+ if(focusKey){const el=$('[data-focus-key="'+focusKey+'"]');if(el){el.focus();try{el.setSelectionRange(selStart,selEnd)}catch{}}}}
 function login(){const e=h('input',{type:'email',placeholder:'Email'}),p=h('input',{type:'password',placeholder:'Password'}),m=h('div');$('#app').replaceChildren(h('div',{class:'md',style:'margin:12vh auto'},h('h2',{},'Sign in'),e,p,m,h('button',{class:'p',onclick:async()=>{const{error}=await sb.auth.signInWithPassword({email:e.value.trim(),password:p.value});error?m.textContent=error.message:boot()}},'Sign in')))}
 async function loadProfiles(){if(!can('o'))return;try{const{data,error}=await sb.from('profiles').select('*').order('email');if(!error){PROFILES=data||[];if(S.tab=='staff')render()}}catch(e){}}
 async function seed(){localStorage.seeded=1;const bc=uid(),cc=uid();await save('cat',{name:'Fiction',dept:'book',n:1},bc);await save('cat',{name:'Beverages',dept:'cafe',n:1},cc);
@@ -1052,6 +1055,7 @@ async function seed(){localStorage.seeded=1;const bc=uid(),cc=uid();await save('
  await save('cafeitem',{name:'Filter Coffee',cat:cc,price:60,gst:5,track:false,stock:0,reorder:null})}
 async function boot(){if(!C.url||C.url.includes('YOUR-PROJECT'))return $('#app').replaceChildren(h('div',{class:'md',style:'margin:12vh auto'},h('h3',{},'Setup needed'),'Open config.js and add your Supabase URL and key. See SETUP-GUIDE.md.'));(await all('rec')).forEach(r=>R[r.id]=r);navigator.storage&&navigator.storage.persist&&navigator.storage.persist();navigator.serviceWorker&&navigator.serviceWorker.register('/sw.js');
  ensureLib('qrcode','QRCode');ensureLib('jsbarcode','JsBarcode');
+ if('Notification' in window&&Notification.permission=='default')Notification.requestPermission().catch(()=>{});
  let c=JSON.parse(localStorage.u||'null'),ses=null;try{ses=(await sb.auth.getSession()).data.session}catch{}
  if(ses){S.user=ses.user;try{const{data}=await sb.from('profiles').select('role').eq('id',ses.user.id).single();if(data)localStorage.u=JSON.stringify(c={id:ses.user.id,role:data.role})}catch{}}else if(c)S.user={id:c.id};
  if(!S.user)return login();S.role=(c&&c.role)||'cashier';$('#app').textContent='Loading…';addEventListener('online',()=>{sync();setNote()});addEventListener('offline',setNote);
@@ -1079,16 +1083,18 @@ function renderPublic(){const q=PUB.q.trim().toLowerCase();const items=PUB.items
    h('input',{placeholder:'Any notes for the counter? (optional)',value:PUB.note,oninput:e=>PUB.note=e.target.value}),
    h('button',{class:'p cta',disabled:!PUB.cart.length,onclick:pubSubmit},'Send order to counter')));
  $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(PUB.settings.name||'Menu')),h('span',{class:'stat'},esc(PUB.tableName))),menu)}
-/* public, no-login printable invoice: index.html?inv=<orderId> -- reached via the WhatsApp bill-share
-   link. Anonymous, scoped to exactly one order id (an unguessable UUID -- the same "anyone with the
-   link" trust model as a typical shareable bill/receipt), via the anon_read_order policy below. */
-async function bootInvoicePublic(id){$('#app').textContent='Loading invoice…';
- const{data,error}=await sb.from('records').select('id,kind,data,deleted').eq('kind','order').eq('id',id).eq('deleted',false).maybeSingle();
+/* public, no-login printable invoice: index.html?i=<shortCode> (or, for orders saved before short
+   codes existed, ?inv=<orderId>) -- reached via the WhatsApp bill-share link. Anonymous, scoped to
+   exactly one order (an unguessable code/UUID -- the same "anyone with the link" trust model as a
+   typical shareable bill/receipt), via the anon_read_order policy below. */
+async function bootInvoicePublic(id,byShort){$('#app').textContent='Loading invoice…';
+ const q=sb.from('records').select('id,kind,data,deleted').eq('kind','order').eq('deleted',false);
+ const{data,error}=await(byShort?q.eq('data->>short',id):q.eq('id',id)).maybeSingle();
  if(error||!data){$('#app').replaceChildren(h('div',{class:'wrap'},h('p',{},'Invoice not found or no longer available.')));return}
  const{data:setRows}=await sb.from('records').select('data').eq('kind','settings').eq('deleted',false);
  R.settings={data:(setRows&&setRows[0]&&setRows[0].data)||{}};
  const o=data.data,card=h('div',{class:'card'});card.innerHTML=inv(o);
  $('#app').replaceChildren(h('header',{class:'top'},h('span',{class:'ttl'},esc(cfg().name||'Invoice'))),
   h('div',{class:'wrap'},card,h('div',{class:'row'},h('button',{class:'p',onclick:()=>prnA4(inv(o))},'Print'))))}
-(function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else if(p.get('inv')){bootInvoicePublic(p.get('inv'))}else{boot()}})();
+(function(){const p=new URLSearchParams(location.search);if(p.get('order')=='1'&&p.get('t')){bootPublic(p.get('t'),p.get('tn'))}else if(p.get('i')){bootInvoicePublic(p.get('i'),true)}else if(p.get('inv')){bootInvoicePublic(p.get('inv'),false)}else{boot()}})();
 </script></body></html>
