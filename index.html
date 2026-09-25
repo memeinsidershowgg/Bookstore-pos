@@ -276,28 +276,22 @@ function tot(o){const lineGross=o.lines.map(l=>r2(l.price*l.qty*(1-(l.disc||0)/1
 function nextNo(){const n=(+localStorage.n||0)+1;localStorage.n=n;const dv=localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2,4).toUpperCase());return cfg().prefix+'-'+dv+'-'+String(n).padStart(4,'0')}
 const newOrder=()=>({id:uid(),lines:[],status:'cart',type:'sale',created:now(),by:S.user.id,cust:{}});
 async function persist(o){o=o||S.cur;if(!o.no)o.no=nextNo();o.t=tot(o);await save('order',o,o.id)}
-/* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels, via an offscreen print-iframe.
-   iOS Safari specifically can silently no-op window.print() called on a 0x0 iframe, and/or on an iframe
-   whose content hasn't actually finished laying out yet -- both looked like nothing happening at all,
-   no error, which is exactly what "Open invoice/slip not working" reports matched. Fixed by giving the
-   iframe real (1px, visually near-invisible via opacity) dimensions, waiting one animation frame after
-   document.write so layout has actually run before print() fires, and cleaning up on the browser's own
-   `afterprint` event instead of a flat 3s timer that could remove the iframe (and its print job) out
-   from under a slow print sheet -- with a long fallback timeout in case afterprint never fires. */
-/* print() MUST fire synchronously inside the click handler's own call stack -- iOS Safari (and most
-   mobile browsers) only allow the print sheet to open as a direct result of a user gesture, and ANY
-   deferral (setTimeout, requestAnimationFrame, an await) breaks that attribution and print() silently
-   no-ops with no error. An earlier version of this function wrapped the call in a double
-   requestAnimationFrame to "let iOS finish layout first" -- that was exactly backwards and is why
-   "Open invoice/slip"/"Print QR" stopped opening anything at all. Layout of a tiny 1x1 iframe with
-   simple HTML is effectively instant, so there's no real race to wait out; only the size fix (real
-   1x1 instead of 0x0, which iOS can refuse to print at all) and the afterprint-based cleanup remain. */
-function printHTML(css,html){const f=h('iframe',{style:'position:fixed;left:0;bottom:0;width:1px;height:1px;border:0;opacity:.01'});
- document.body.append(f);const d=f.contentDocument;d.open();d.write('<style>'+css+'</style>'+html);d.close();
- const cleanup=()=>{if(f.isConnected)f.remove()};
- f.contentWindow.onafterprint=cleanup;
- try{f.contentWindow.focus();f.contentWindow.print()}catch(e){console.error('print',e);alert('Could not open the print dialog: '+e.message)}
- setTimeout(cleanup,60000)}
+/* printing: 80mm thermal receipt + A4 formal invoice + barcode/QR labels.
+   iOS Safari cannot window.print() a hidden/offscreen iframe at all when the app is running
+   "standalone" (added to the home screen) -- there's no browser chrome in that mode to host a
+   print sheet, so print() just silently no-ops with zero error, no matter how the iframe is timed
+   or sized. That matched every "Open invoice/slip"/"Print QR" report exactly. The fix is to route
+   around standalone mode entirely: window.open() a real new tab (which on iOS breaks out into
+   full Safari, chrome and all) and print from inside that tab's own load event.
+   window.open(), like print(), MUST fire synchronously inside the click handler's own call stack --
+   any deferral (setTimeout/rAF/await) before it loses user-gesture attribution and gets silently
+   blocked as a popup. So printHTML() itself stays a plain synchronous call. */
+function printHTML(css,html){
+ const w=window.open('','_blank');
+ if(!w){alert('Could not open the print window. If this app is installed on your home screen, allow pop-ups for it in Settings, or open it in Safari instead.');return}
+ w.document.open();
+ w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+html+'<script>window.onload=function(){window.focus();window.print()};window.onafterprint=function(){try{window.close()}catch(e){}}<\/script></body></html>');
+ w.document.close()}
 function prn(html){printHTML('body{font:12px monospace;width:72mm;margin:0}td{padding:1px 0}.r{text-align:right}',html)}
 function prnA4(html){printHTML('@page{size:A4;margin:14mm}body{font:13px sans-serif}table{border-collapse:collapse;width:100%}td,th{padding:4px;border:1px solid #ccc}',html)}
 function rcpt(o){const s=cfg(),t=o.t;const payLine=(o.pays||[]).map(p=>p.m+' '+(o.type=='return'?Math.abs(p.amt):p.amt)+(p.denoms&&denomSummary(p.denoms)?' ('+denomSummary(p.denoms)+')':'')+(o.type=='return'&&p.m=='cash'&&o.changeDenoms&&denomSummary(o.changeDenoms)?' ('+denomSummary(o.changeDenoms)+')':'')).join(', ');
